@@ -63,6 +63,6 @@ Answers are saved for 30 days, so reopening one is instant and free. **Ask again
 
 ## Publishing
 
-[`store/listing.md`](store/listing.md) has the text for each tab of the Chrome Web Store dashboard, along with what to do before submitting. [`store/privacy-policy.html`](store/privacy-policy.html) needs hosting at a public link.
+[`store/listing.md`](store/listing.md) has the text for each tab of the Chrome Web Store dashboard, along with what to do before submitting. The privacy policy is [`store/privacy-policy.md`](store/privacy-policy.md).
 
 Know It is not affiliated with or endorsed by YouTube or Google.
