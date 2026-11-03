@@ -17,7 +17,7 @@ export interface Settings {
   prefetch: boolean;
 }
 
-const DEFAULTS: Settings = { apiKey: '', model: DEFAULT_MODEL, language: 'english', prefetch: true };
+const DEFAULTS: Settings = { apiKey: '', model: DEFAULT_MODEL, language: 'english', prefetch: false };
 
 export async function getSettings(): Promise<Settings> {
   const stored = await chrome.storage.local.get('settings');

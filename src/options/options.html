@@ -43,7 +43,7 @@
 
       <section>
         <h2><label for="prefetch">Prepare answers in advance</label></h2>
-        <p class="help">Gets answers ready for videos under 9 minutes that stay on your screen for a few seconds, so they open instantly. This uses your daily limit even for videos you never open. It stops at 4 of the 8 hours, which leaves the rest for your own clicks.</p>
+        <p class="help">Off by default. Gets answers ready for videos under 9 minutes that stay on your screen for a few seconds, so they open instantly. This sends those videos to Google even if you never click them, and uses your daily limit. It stops at 4 of the 8 hours, which leaves the rest for your own clicks.</p>
         <div class="row">
           <input id="prefetch" type="checkbox" />
           <label for="prefetch">Turn on</label>
@@ -61,6 +61,17 @@
         <h2>Saved answers</h2>
         <p id="cache-text"></p>
         <button id="clear-cache" type="button" class="secondary">Clear saved answers</button>
+      </section>
+
+      <section>
+        <h2>Your data</h2>
+        <p class="help">
+          When you ask for an answer, the video's link, title, channel, description and tags go to Google's Gemini API using your key. Nothing goes to the maker of this extension.
+          On Gemini's free tier, Google may use what it receives to improve its products, and people may review it. See
+          <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Gemini's terms</a>,
+          which require you to be 18 or older.
+        </p>
+        <p class="help">Know It is not affiliated with or endorsed by YouTube or Google. Answers come from an AI model and can be wrong.</p>
       </section>
     </main>
     <script src="options.js"></script>

@@ -71,11 +71,16 @@ describe('answer cache', () => {
 
 describe('settings', () => {
   it('has defaults before anything is saved', async () => {
-    expect(await getSettings()).toEqual({ apiKey: '', model: DEFAULT_MODEL, language: 'english', prefetch: true });
+    expect(await getSettings()).toEqual({ apiKey: '', model: DEFAULT_MODEL, language: 'english', prefetch: false });
   });
 
-  it('turns new settings on for people who saved settings before they existed', async () => {
+  it('leaves preparing in advance off for people who saved settings before it existed', async () => {
     await chrome.storage.local.set({ settings: { apiKey: 'k', model: 'm', language: 'video' } });
+    expect((await getSettings()).prefetch).toBe(false);
+  });
+
+  it('keeps preparing in advance on once someone has chosen it', async () => {
+    await saveSettings({ apiKey: 'k', model: 'm', language: 'video', prefetch: true });
     expect((await getSettings()).prefetch).toBe(true);
   });
 });

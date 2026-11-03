@@ -4,3 +4,4 @@ dist-e2e/
 e2e/output/
 .env.local
 .DS_Store
+know-it.zip

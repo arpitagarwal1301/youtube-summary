@@ -141,6 +141,12 @@ async function run() {
 
     const button = page.locator('know-it-root .know-it');
     const popover = page.locator('know-it-root .popover');
+    /** Real results pages can still be shifting, leaving the pointer off the card until it moves again. */
+    const hoverUntilButton = async (link) => {
+      await link.hover();
+      await button.waitFor({ state: 'visible', timeout: 1500 }).catch(() => link.hover({ position: { x: 20, y: 60 } }));
+      await button.waitFor({ state: 'visible', timeout: 5000 });
+    };
     const setStorage = (items) => worker.evaluate((value) => chrome.storage.local.set(value), items);
     const getStorage = (key) => worker.evaluate((name) => chrome.storage.local.get(name), key);
 
@@ -369,7 +375,15 @@ async function run() {
     });
 
     await check('works in the sidebar of a video, after in-app navigation', async () => {
-      await thumb.click();
+      // YouTube's preview player can cover a thumbnail for a moment, but the extension must never block a click.
+      await thumb.click({ timeout: 10_000 }).catch(async (err) => {
+        const blocker = err.message.split('\n').find((line) => line.includes('intercepts pointer events'));
+        console.log(`        first click was blocked: ${blocker?.trim().slice(0, 160) ?? err.message.split('\n')[0]}`);
+        assert(!blocker?.includes('know-it-root'), 'the extension blocked a click on a thumbnail');
+        await page.mouse.move(2, 400);
+        await page.waitForTimeout(1000);
+        await thumb.click({ timeout: 15_000 });
+      });
       await page.waitForURL(/watch\?v=/, { timeout: 15_000 });
       const sidebar = page.locator(
         'ytd-watch-next-secondary-results-renderer a[href*="/watch?v="]:has(img), ytd-watch-next-secondary-results-renderer a[href*="/watch?v="]:has(yt-thumbnail-view-model)',
@@ -467,10 +481,7 @@ async function run() {
       const shorts = page.locator('a[href^="/shorts/"]:has(img), a[href^="/shorts/"]:has(yt-thumbnail-view-model)');
       await shorts.first().waitFor({ timeout: 30_000 });
       await shorts.first().scrollIntoViewIfNeeded();
-      await shorts.first().hover();
-      // The results page can still be shifting, leaving the pointer off the card until it moves again.
-      await button.waitFor({ state: 'visible', timeout: 1500 }).catch(() => shorts.first().hover({ position: { x: 20, y: 60 } }));
-      await button.waitFor({ state: 'visible', timeout: 5000 });
+      await hoverUntilButton(shorts.first());
       await button.click();
       await popover.getByText('MOCK ANSWER').waitFor({ timeout: 15_000 });
       const shortId = (await shorts.first().getAttribute('href')).split('/')[2];
@@ -484,8 +495,7 @@ async function run() {
       await page.goto('https://www.youtube.com/results?search_query=news&sp=EgJAAQ%253D%253D', { waitUntil: 'domcontentloaded' });
       const live = await firstThumbnail(page);
       const before = mock.requests.length;
-      await live.hover();
-      await button.waitFor({ state: 'visible', timeout: 5000 });
+      await hoverUntilButton(live);
       await button.click();
       await popover.getByText('Live streams cannot be answered').waitFor({ timeout: 5000 });
       assert(mock.requests.length === before, 'a request was sent');
@@ -542,7 +552,14 @@ async function run() {
     await page.goto(SHORT_RESULTS, { waitUntil: 'domcontentloaded' });
     await page.locator(THUMBNAILS).first().waitFor({ timeout: 30_000 });
     await page.waitForTimeout(2000);
-    const [firstCard, secondCard] = await onScreenThumbnails();
+    // Tall ads or shelves can leave fewer than two whole thumbnails on screen, so scroll until there are.
+    let cards = await onScreenThumbnails();
+    for (let tries = 0; cards.length < 2 && tries < 6; tries++) {
+      await page.evaluate(() => window.scrollBy(0, 250));
+      await page.waitForTimeout(500);
+      cards = await onScreenThumbnails();
+    }
+    const [firstCard, secondCard] = cards;
 
     await check('button shows the sparkle icon and "Know it"', async () => {
       await firstCard.hover();
@@ -610,11 +627,19 @@ async function run() {
     };
 
     await check('short on-screen videos get prepared, one at a time', async () => {
+      // A slow request left over from an earlier check would look like two running at once.
+      for (let waited = 0; mock.inFlight > 0 && waited < 15_000; waited += 250) await page.waitForTimeout(250);
       const from = mock.requests.length;
       mock.defaultDelayMs = 1500;
       mock.maxInFlight = 0;
       await openWithPrefetch(SHORT_RESULTS);
-      const count = await waitForRequests(from, 3, 40_000);
+      // Only videos on screen get prepared, and an ad can leave room for just one or two, so scroll for more.
+      let count = 0;
+      for (let tries = 0; tries < 8 && count < 3; tries++) {
+        count = await waitForRequests(from, 3, 7000);
+        // Not the mouse wheel: the pointer rests over YouTube's left menu, which would scroll instead.
+        if (count < 3) await page.evaluate(() => window.scrollBy(0, 400));
+      }
       assert(count >= 3, `only ${count} videos were prepared`);
       assert(mock.maxInFlight === 1, `${mock.maxInFlight} ran at once`);
       const ids = requestedIds(from);

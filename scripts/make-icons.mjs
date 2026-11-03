@@ -8,8 +8,18 @@ const out = join(dirname(fileURLToPath(import.meta.url)), '../public/icons');
 await mkdir(out, { recursive: true });
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <path fill="#065fd4" d="M28 8h72a20 20 0 0 1 20 20v52a20 20 0 0 1-20 20H62l-26 22V100h-8A20 20 0 0 1 8 80V28A20 20 0 0 1 28 8z"/>
-  <path fill="#ffffff" d="M52 30l40 24-40 24z"/>
+  <defs>
+    <linearGradient id="warm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd166"/>
+      <stop offset="1" stop-color="#ff7a59"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="#211c1a"/>
+  <g fill="url(#warm)" transform="translate(17 18) scale(3.9)">
+    <path d="M9.5 4 11 9.5 16.5 11 11 12.5 9.5 18 8 12.5 2.5 11 8 9.5Z"/>
+    <path d="M18 2 18.8 5.2 22 6 18.8 6.8 18 10 17.2 6.8 14 6 17.2 5.2Z"/>
+    <path d="M18 14.5 18.6 16.9 21 17.5 18.6 18.1 18 20.5 17.4 18.1 15 17.5 17.4 16.9Z"/>
+  </g>
 </svg>`;
 
 const browser = await chromium.launch();

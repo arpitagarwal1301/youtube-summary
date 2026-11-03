@@ -24,7 +24,7 @@ Gemini can't reliably name a film from faces. In testing it named a different wr
 - **The video you're on:** click the toolbar icon. On any other page, the icon opens settings.
 - **Checking an answer:** the **Check it at** link opens the video at the moment that backs up the answer.
 - **While it loads:** you can move on to other thumbnails. A small spinner stays on the video, and it becomes a sparkle you can click when the answer is ready.
-- **Answers prepared in advance:** videos under 9 minutes that stay on screen for a few seconds get prepared one at a time, so they open instantly. This counts towards your daily limit even for videos you never open, and stops at 4 of the 8 hours. It doesn't run on a video's own page, and you can turn it off in settings.
+- **Answers prepared in advance:** off by default, and you can turn it on in settings. Videos under 9 minutes that stay on screen for a few seconds get prepared one at a time, so they open instantly. This sends those videos to Google and counts towards your daily limit even if you never open them, and it stops at 4 of the 8 hours. It doesn't run on a video's own page.
 
 Answers are saved for 30 days, so reopening one is instant and free. **Ask again** gets a new answer and counts towards the daily limit.
 
@@ -47,6 +47,8 @@ Answers are saved for 30 days, so reopening one is instant and free. **Ask again
 | `npm run test:e2e` | Runs the extension on real YouTube with a mock Gemini, saving screenshots to `e2e/output` |
 | `npm run test:real` | Runs the production build on real YouTube with the real Gemini, using one short video from your quota |
 | `npm run try-videos -- <urls>` | Sends real videos to Gemini and prints speed, tokens and answers |
+| `npm run package` | Builds the extension and zips it into `know-it.zip` for the Chrome Web Store |
+| `npm run store-screenshots` | Captures the store screenshots from `dist` into `store/screenshots`, using no API key |
 
 `npm run test:real -- --prefetch` tries advance preparation for 90 seconds instead, using several short videos from your quota.
 
@@ -58,3 +60,9 @@ Answers are saved for 30 days, so reopening one is instant and free. **Ask again
 - **`src/background`** holds the key, cache and daily limit, reads the video page's details and builds the prompt.
 - **`src/offscreen`** makes the Gemini request. Chrome stops a service worker when a response takes over 30 seconds, and a video can take longer than that.
 - **`src/options`** is the settings page.
+
+## Publishing
+
+[`store/listing.md`](store/listing.md) has the text for each tab of the Chrome Web Store dashboard, along with what to do before submitting. [`store/privacy-policy.html`](store/privacy-policy.html) needs hosting at a public link.
+
+Know It is not affiliated with or endorsed by YouTube or Google.
