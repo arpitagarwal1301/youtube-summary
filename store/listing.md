@@ -4,8 +4,9 @@ Text to paste into each tab of the [developer dashboard](https://chrome.google.c
 
 ## Before you submit
 
-1. Replace `REPLACE_WITH_YOUR_EMAIL` in `privacy-policy.html`, and host the page at a public link.
-2. Create a spare free Gemini key for the reviewer (see **Test instructions**).
+1. Create a spare free Gemini key for the reviewer (see **Test instructions**).
+
+The privacy policy is live at https://arpitagarwal1301.github.io/youtube-summary/store/privacy-policy.html
 
 ## Store listing tab
 
