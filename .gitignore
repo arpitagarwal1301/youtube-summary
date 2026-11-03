@@ -1,0 +1,6 @@
+node_modules/
+dist/
+dist-e2e/
+e2e/output/
+.env.local
+.DS_Store

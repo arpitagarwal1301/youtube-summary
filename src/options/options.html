@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Know It settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Know It settings</h1>
+      <p class="lead">Hover over a YouTube thumbnail and click <strong>Know it</strong> to get the answer to its headline without opening the video.</p>
+
+      <section>
+        <h2><label for="api-key">Gemini API key</label></h2>
+        <p class="help">
+          Get a free key from
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>.
+          It is stored only in this browser and sent only to Google.
+        </p>
+        <div class="row">
+          <input id="api-key" type="password" autocomplete="off" spellcheck="false" />
+          <button id="toggle-key" type="button" class="secondary">Show</button>
+        </div>
+        <div class="row">
+          <button id="save-key" type="button">Save and test key</button>
+          <span id="key-status" role="status"></span>
+        </div>
+      </section>
+
+      <section>
+        <h2><label for="model">Model</label></h2>
+        <select id="model"></select>
+      </section>
+
+      <section>
+        <h2><label for="language">Answer language</label></h2>
+        <select id="language">
+          <option value="english">Always English</option>
+          <option value="video">Same as the video</option>
+        </select>
+      </section>
+
+      <section>
+        <h2><label for="prefetch">Prepare answers in advance</label></h2>
+        <p class="help">Gets answers ready for videos under 9 minutes that stay on your screen for a few seconds, so they open instantly. This uses your daily limit even for videos you never open. It stops at 4 of the 8 hours, which leaves the rest for your own clicks.</p>
+        <div class="row">
+          <input id="prefetch" type="checkbox" />
+          <label for="prefetch">Turn on</label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Free daily limit</h2>
+        <p class="help">Gemini's free tier allows 8 hours of YouTube video a day, resetting at midnight Pacific time. Saved answers do not count.</p>
+        <div class="meter" role="progressbar" aria-labelledby="usage-text" aria-valuemin="0" aria-valuemax="100" id="usage-meter"><div id="usage-fill"></div></div>
+        <p id="usage-text"></p>
+      </section>
+
+      <section>
+        <h2>Saved answers</h2>
+        <p id="cache-text"></p>
+        <button id="clear-cache" type="button" class="secondary">Clear saved answers</button>
+      </section>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>
