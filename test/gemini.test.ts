@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildRequestBody, describeHttpError, interpretResponse, runGemini } from '../src/background/gemini';
-import { DEFAULT_MODEL } from '../src/shared/settings';
 import type { GeminiJob, VideoRef } from '../src/shared/types';
 
 const video: VideoRef = { videoId: 'dQw4w9WgXcQ', title: 'You will not believe this', channel: 'Some Channel', durationSeconds: 120 };
-const job: GeminiJob = { video, apiKey: 'test-key', model: 'gemini-3.8-flash', language: 'english' };
+const job: GeminiJob = { video, apiKey: 'test-key', model: 'gemini-3.8-flash', fallbackModel: 'gemini-3.5-flash-lite', language: 'english' };
 
 function responseWith(text: string, extra: object = {}) {
   return { candidates: [{ finishReason: 'STOP', content: { parts: [{ text }] } }], ...extra };
@@ -83,8 +82,15 @@ describe('describeHttpError', () => {
     [500, 'Internal error', 'server'],
     [503, 'This model is currently experiencing high demand.', 'overloaded'],
     [400, 'Unknown name "foo"', 'rejected'],
+    [404, 'models/gemini-0 is not found for API version v1beta, or is not supported for generateContent.', 'no_model'],
   ])('maps %i "%s" to %s', (status, message, code) => {
     expect(describeHttpError(status, error(message)).code).toBe(code);
+  });
+
+  it('tells people in the EU or UK to turn on billing for their key', () => {
+    const result = describeHttpError(400, error('User location is not supported for the API use without a billing account linked.'));
+    expect(result.code).toBe('invalid_key');
+    expect(result.message).toContain('Turn on billing');
   });
 
   it('includes the reason in an unrecognised rejection', () => {
@@ -136,8 +142,15 @@ describe('runGemini', () => {
     const modelsCalled = (fetchMock: ReturnType<typeof vi.fn>) =>
       fetchMock.mock.calls.map(([url]) => String(url).match(/models\/(.+):/)?.[1]);
 
-    it('uses Flash-Lite by default, as the most reliable in testing', () => {
-      expect(DEFAULT_MODEL).toBe('gemini-3.5-flash-lite');
+    it('switches when the chosen model no longer exists', async () => {
+      const fetchMock = vi.fn(async (url: string) =>
+        url.includes('gemini-3.8-flash')
+          ? new Response(JSON.stringify({ error: { message: 'models/gemini-3.8-flash is not found' } }), { status: 404 })
+          : new Response(JSON.stringify(responseWith('{"answer":"Yes"}'))),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      expect(await runGemini(job)).toMatchObject({ ok: true, video: { videoId: video.videoId } });
+      expect(modelsCalled(fetchMock)).toEqual(['gemini-3.8-flash', 'gemini-3.5-flash-lite']);
     });
 
     it.each([503, 429])('switches to the fallback model on HTTP %i', async (status) => {

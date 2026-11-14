@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { findVideoAt, findVisibleVideos, readCurrentPageVideo } from '../src/content/card';
+import { findPageAnchor, findVideoAt, findVisibleVideos, readCurrentPageVideo, seekPageVideo, selector, setSelectors } from '../src/content/card';
+import { DEFAULT_SELECTORS } from '../src/shared/remote';
 
 const ID = 'dQw4w9WgXcQ';
 
@@ -187,12 +188,65 @@ describe('readCurrentPageVideo', () => {
     });
   });
 
-  it('falls back to the document title', () => {
-    document.title = 'Tab headline - YouTube';
-    expect(readCurrentPageVideo(document, `https://www.youtube.com/shorts/${ID}`)?.title).toBe('Tab headline');
+  it('falls back to the document title, without the notification count', () => {
+    document.title = '(3) Tab headline - YouTube';
+    expect(readCurrentPageVideo(document, `https://www.youtube.com/shorts/${ID}`)).toMatchObject({ title: 'Tab headline', isShort: true });
+  });
+
+  it("reads the length from the player, but not while an advert plays", () => {
+    render(`<div id="movie_player" class="html5-video-player"><video class="html5-main-video"></video></div>`);
+    Object.defineProperty(at('video'), 'duration', { value: 412.4 });
+    expect(readCurrentPageVideo(document, `https://www.youtube.com/watch?v=${ID}`)?.durationSeconds).toBe(412);
+    at('#movie_player').classList.add('ad-showing');
+    expect(readCurrentPageVideo(document, `https://www.youtube.com/watch?v=${ID}`)?.durationSeconds).toBeUndefined();
+  });
+
+  it('marks a live stream', () => {
+    render(`<div id="movie_player"><video class="html5-main-video"></video></div>`);
+    Object.defineProperty(at('video'), 'duration', { value: Infinity });
+    expect(readCurrentPageVideo(document, `https://www.youtube.com/watch?v=${ID}`)?.isLive).toBe(true);
   });
 
   it('returns null away from a video', () => {
     expect(readCurrentPageVideo(document, 'https://www.youtube.com/')).toBeNull();
+  });
+});
+
+describe('page anchor and seeking', () => {
+  const laidOut = (element: Element) =>
+    (element.getBoundingClientRect = () => ({ width: 300, height: 40, top: 0, left: 0, right: 300, bottom: 40, x: 0, y: 0, toJSON: () => ({}) }));
+
+  it('sits beside the title on a watch page and beside the player on Shorts', () => {
+    render(`<ytd-watch-metadata><div id="title"><h1>T</h1></div></ytd-watch-metadata><div id="shorts-player"></div>`);
+    laidOut(at('#title'));
+    laidOut(at('#shorts-player'));
+    expect(findPageAnchor(document, '/watch')).toEqual({ element: at('#title'), kind: 'watch' });
+    expect(findPageAnchor(document, `/shorts/${ID}`)).toEqual({ element: at('#shorts-player'), kind: 'shorts' });
+    expect(findPageAnchor(document, '/')).toBeNull();
+  });
+
+  it('skips a hidden copy of the title left over from the last page', () => {
+    render(`<ytd-watch-metadata><div id="title"></div></ytd-watch-metadata>`);
+    expect(findPageAnchor(document, '/watch')).toBeNull();
+  });
+
+  it('moves the player, unless an advert is playing', () => {
+    render(`<div id="movie_player" class="html5-video-player"><video class="html5-main-video"></video></div>`);
+    const video = at('video') as HTMLVideoElement;
+    video.play = vi.fn(async () => undefined);
+    expect(seekPageVideo(document, 90)).toBe(true);
+    expect(video.currentTime).toBe(90);
+    at('#movie_player').classList.add('ad-interrupting');
+    expect(seekPageVideo(document, 10)).toBe(false);
+  });
+});
+
+describe('setSelectors', () => {
+  afterEach(() => setSelectors({ ...DEFAULT_SELECTORS }));
+
+  it('takes a corrected selector and ignores one that is not valid CSS', () => {
+    setSelectors({ card: 'yt-new-lockup', ad: '[[[' });
+    expect(selector('card')).toBe('yt-new-lockup');
+    expect(selector('ad')).toBe(DEFAULT_SELECTORS.ad);
   });
 });

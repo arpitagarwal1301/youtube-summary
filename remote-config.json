@@ -1,0 +1,7 @@
+{
+  "models": {
+    "auto": "gemini-flash-lite-latest",
+    "fallback": "gemini-3.1-flash-lite"
+  },
+  "notice": null
+}

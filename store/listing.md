@@ -36,13 +36,14 @@ WHAT YOU GET
 
 HOW IT WORKS
 • Works on the home feed, search results, the sidebar and Shorts shelves
-• Click the toolbar icon to get an answer for the video you're on
-• Move on while it loads: a spinner stays on the thumbnail and becomes a sparkle when the answer is ready
-• Answers are saved for 30 days, so reopening one is instant
-• Optional: prepare answers in advance for short videos, so they open instantly
+• A button beside Like on the video you're watching, and inside the Shorts player
+• Move on while it loads: a spinner stays on the thumbnail, and the answer pops up when it's ready
+• A button in YouTube's top bar shows today's answers and the minutes you saved
+• Optional Auto: answers each video you open, after 5 seconds
+• Copy an answer to share it
 
 WHAT YOU NEED
-• A Gemini API key from Google AI Studio. The free tier allows 8 hours of YouTube video a day, and the extension keeps count so you stay inside it.
+• A Gemini API key from Google AI Studio. The free tier allows 8 hours of YouTube video a day, and the extension keeps count so you stay inside it. In the EU, the UK and Switzerland, Google allows only paid keys.
 • You must be 18 or older, as Gemini's terms require.
 
 GOOD TO KNOW
@@ -67,11 +68,12 @@ Answers the headline of a YouTube video without opening it: the user clicks a bu
 | --- | --- |
 | `storage` | Stores the user's Gemini API key, settings, saved answers and daily usage count in the browser. |
 | `offscreen` | Keeps a Gemini request running. A video can take longer than 30 seconds to process, and Chrome stops a service worker's fetch after that. |
-| `scripting` | When the user clicks the toolbar icon on a YouTube tab that was open before the extension was installed, this adds the extension's script to that tab so it can show the answer. |
+| `scripting` | Adds the extension's script to YouTube tabs that were already open when it was installed, so the button works there without a reload. |
+| `notifications` | Tells the user that an answer they asked for is ready while YouTube isn't in view. The user can turn this off. |
 | Host `https://www.youtube.com/*` | Shows the Know it button on video thumbnails, and reads the public description and tags from a video's page to improve the answer. |
 | Host `https://generativelanguage.googleapis.com/*` | Sends the user's request to the Gemini API, using the user's own key. |
 
-**Remote code:** No, I am not using remote code.
+**Remote code:** No, I am not using remote code. (The extension reads a JSON data file from its GitHub repository once a day, holding model names and page selectors. Nothing in it is run as code.)
 
 **Data usage**, what to tick. These labels are from memory, so check them against the dashboard:
 
@@ -93,9 +95,7 @@ Answers the headline of a YouTube video without opening it: the user clicks a bu
 
 **Visibility:** Unlisted to start. It goes through the same review, but only people with the link can install it. Change it to Public when you're ready.
 
-**Regions:** select individually and leave these out, because Gemini's terms allow only paid services for users there:
-
-Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden, Switzerland, United Kingdom.
+**Regions:** All regions. In the EU, the UK and Switzerland, Google refuses free keys, so people there need a key from a project with billing turned on. The extension tells them so if a request is refused.
 
 ## Test instructions tab
 
@@ -106,8 +106,9 @@ The extension needs a Gemini API key. Use this test key:
 
 REPLACE_WITH_A_SPARE_TEST_KEY
 
-1. On the settings page that opens after installing, paste the key and click "Save and test key".
+1. On the welcome page that opens after installing, paste the key and click "Save and test".
 2. Open https://www.youtube.com/results?search_query=stocks+explained+with+bananas
 3. Hover over a video's thumbnail and click "Know it" at its top left.
 4. The answer appears in a popover next to the thumbnail, usually within about 30 seconds.
+5. Click the toolbar icon to see today's answers and the settings.
 ```

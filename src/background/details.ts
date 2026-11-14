@@ -17,7 +17,11 @@ export async function addPageDetails(video: VideoRef): Promise<VideoRef> {
       signal: AbortSignal.timeout(DETAILS_TIMEOUT_MS),
     });
     if (!response.ok) return video;
-    return { ...parsePageDetails(await response.text()), ...video };
+    const details = parsePageDetails(await response.text());
+    // The page knows the real length. A card shows none for some videos, and a player shows an advert's length while one plays.
+    const merged = { ...details, ...video };
+    if (details.durationSeconds !== undefined) merged.durationSeconds = details.durationSeconds;
+    return merged;
   } catch {
     return video;
   }
@@ -34,6 +38,8 @@ export function parsePageDetails(html: string): Partial<VideoRef> {
 
   const length = Number(html.match(/"lengthSeconds":"(\d+)"/)?.[1]);
   if (length > 0) details.durationSeconds = length;
+
+  if (/"isLiveNow":true/.test(html)) details.isLive = true;
 
   return details;
 }

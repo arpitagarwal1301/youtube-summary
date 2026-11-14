@@ -12,8 +12,8 @@ const extension = join(root, 'dist');
 const output = join(root, 'store/screenshots');
 await mkdir(output, { recursive: true });
 
-// Must match PROMPT_VERSION in src/shared/cache.ts. The checks below fail if it doesn't.
-const answerKey = (videoId) => `answer:5:english:${videoId}`;
+// Must match FORMAT_VERSION in src/shared/saved.ts. The checks below fail if it doesn't.
+const answerKey = (videoId) => `answer:6:english:${videoId}`;
 const SEARCH_URL = 'https://www.youtube.com/results?search_query=stocks+explained+with+bananas';
 const TITLE = 'Stocks Explained with Bananas';
 const ANSWER = {
@@ -75,11 +75,12 @@ try {
   const nextId = await videoIdOf(nextCard);
   if (!videoId || !nextId || videoId === nextId) throw new Error(`Could not read two videos: ${videoId}, ${nextId}`);
   await worker.evaluate(
-    async ([readyKey, loadingKey, answer, loadingId]) => {
-      await chrome.storage.local.set({ [readyKey]: { answer, savedAt: Date.now() } });
+    async ([readyKey, loadingKey, answer, loadingId, readyId, title]) => {
+      const video = { videoId: readyId, title, channel: 'Simply Put', durationSeconds: 248 };
+      await chrome.storage.local.set({ [readyKey]: { video, answer, savedAt: Date.now(), source: 'thumbnail' } });
       await chrome.storage.session.set({ jobs: { [loadingKey]: { video: { videoId: loadingId, title: '' }, tabIds: [], startedAt: Date.now() } } });
     },
-    [answerKey(videoId), answerKey(nextId), ANSWER, nextId],
+    [answerKey(videoId), answerKey(nextId), ANSWER, nextId, videoId, TITLE],
   );
   await openResults();
   const ready = page.locator('know-it-root .marker[data-status="ready"]');
@@ -93,10 +94,19 @@ try {
   await popover.locator('mark').first().waitFor({ state: 'visible', timeout: 5000 });
   await shot('3-answer.png');
 
-  // 4. Settings, with no key in the field.
-  await page.goto(`chrome-extension://${extensionId}/options.html`);
-  await page.locator('#prefetch').waitFor();
-  await shot('4-settings.png');
+  // 4. The toolbar panel, opened as a tab on a dark backdrop at the size Chrome shows it. The key is a placeholder that is never sent.
+  await worker.evaluate(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { model: 'auto', language: 'english', autoAnswer: false, notifications: true, ...settings, apiKey: 'AIzaSyStoreScreenshotPlaceholder0000', version: 2 } });
+    await chrome.storage.local.set({ usage: { day: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), seconds: 4 * 60 * 15 } });
+    await chrome.storage.session.remove('jobs');
+  });
+  await page.goto(`chrome-extension://${extensionId}/panel.html`);
+  await page.locator('#list .item').first().waitFor({ timeout: 5000 });
+  await page.locator('#list .item .expand').first().click();
+  await page.addStyleTag({ content: 'html { background: #2b2523; min-height: 100%; } body { margin: 40px auto !important; box-shadow: 0 12px 40px rgba(0,0,0,.45); border-radius: 12px; overflow: hidden; }' });
+  await page.waitForTimeout(500);
+  await shot('4-panel.png');
   console.log(`Saved 4 screenshots to ${output}`);
 } finally {
   await context.close();

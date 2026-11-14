@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Know It</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <main id="main">
+      <header class="top">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd166" /><stop offset="1" stop-color="#ff7a59" /></linearGradient></defs>
+          <path fill="url(#g)" d="M9.5 4 11 9.5 16.5 11 11 12.5 9.5 18 8 12.5 2.5 11 8 9.5Z" />
+          <path fill="url(#g)" d="M18 2 18.8 5.2 22 6 18.8 6.8 18 10 17.2 6.8 14 6 17.2 5.2Z" />
+          <path fill="url(#g)" d="M18 14.5 18.6 16.9 21 17.5 18.6 18.1 18 20.5 17.4 18.1 15 17.5 17.4 16.9Z" />
+        </svg>
+        <h1>Know It</h1>
+        <p class="saved-today" id="saved-today" hidden></p>
+        <button id="settings-toggle" class="icon gear" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+        </button>
+        <button id="close" class="icon close" aria-label="Close" hidden>×</button>
+      </header>
+
+      <section id="welcome" hidden>
+        <h2>Know It is installed</h2>
+        <p class="help">Open YouTube, point at any video and press <strong>Know it</strong>. You get the answer its headline is teasing, without watching.</p>
+        <p class="help">Tip: pin Know It so this panel is one click away. Click the puzzle piece at the top right of Chrome, then the pin next to Know It. Today's answers and your settings are here.</p>
+        <a class="button" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">Open YouTube</a>
+      </section>
+
+      <section id="setup" hidden>
+        <h2>One-time setup, about a minute</h2>
+        <p class="help">Know It uses your own free Gemini key from Google. It stays in this browser and is sent only to Google.</p>
+        <div id="key-form"></div>
+      </section>
+
+      <!-- Answers, the panel's main view. Settings replace it while open. -->
+      <div id="home">
+        <p id="limit-note" class="limit-note" role="status" hidden></p>
+        <section id="answers">
+          <h2>Today's answers <span id="count"></span></h2>
+          <ul id="list"></ul>
+          <p class="help" id="empty">Nothing yet. Point at a YouTube video and press Know it. Answers stay here for 24 hours.</p>
+        </section>
+
+        <p id="notice" class="notice" hidden></p>
+        <p id="nudge" class="notice" hidden>
+          <span>Enjoying Know It? It is free and made by one person. <a id="nudge-link" target="_blank" rel="noopener noreferrer">Sponsor it</a></span>
+          <button id="nudge-close" class="icon" aria-label="Dismiss">×</button>
+        </p>
+      </div>
+
+      <section id="settings" hidden>
+        <button id="settings-back" class="back">Today's answers</button>
+        <h2 class="view-title">Settings</h2>
+        <div class="setting" id="auto-section">
+          <div class="setting-row">
+            <label for="auto">Auto-answer videos I open</label>
+            <input id="auto" class="switch" type="checkbox" role="switch" />
+          </div>
+          <p class="help">Off: nothing is sent until you press Know it. On: each video under 30 minutes that you open is sent to Google after 5 seconds, up to 4 of your 8 hours a day.</p>
+        </div>
+        <div class="setting">
+          <div class="setting-row">
+            <span>Gemini key</span>
+            <span><code id="key-mask"></code> <button id="key-change" class="link">Change</button></span>
+          </div>
+          <div id="key-change-form" hidden></div>
+        </div>
+        <div class="setting">
+          <div class="setting-row">
+            <label for="language">Answer language</label>
+            <select id="language">
+              <option value="english">Always English</option>
+              <option value="video">Same as the video</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting">
+          <div class="setting-row">
+            <label for="notifications">Desktop notifications</label>
+            <input id="notifications" class="switch" type="checkbox" role="switch" />
+          </div>
+          <p class="help">Tells you when an answer you asked for is ready while YouTube is not in view.</p>
+        </div>
+
+        <button id="advanced-toggle" class="disclosure" aria-expanded="false" aria-controls="advanced">Advanced</button>
+        <div id="advanced" hidden>
+          <div class="setting">
+            <div class="setting-row">
+              <label for="model">Model</label>
+              <select id="model"><option value="auto">Automatic (recommended)</option></select>
+            </div>
+            <p class="help" id="model-help">Automatic follows Google's newest fast model. Pin one only if answers get worse.</p>
+          </div>
+          <div class="setting">
+            <div class="setting-row">
+              <span id="saved-count"></span>
+              <button id="clear" class="link">Clear today's answers</button>
+            </div>
+            <p class="help">Videos you ask about go to Google's Gemini with your key. Nothing goes to the maker of Know It. <a id="privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a></p>
+          </div>
+        </div>
+        <p class="version"><span id="version"></span> · <a id="whats-new" target="_blank" rel="noopener noreferrer">What's new</a></p>
+      </section>
+
+      <footer>
+        <a id="sponsor" class="sponsor-button" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>
+          Sponsor Know It
+        </a>
+        <span class="links">
+          <a id="github" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.3 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" /></svg>
+            GitHub
+          </a>
+          <a id="feedback" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z" /></svg>
+            Feedback
+          </a>
+        </span>
+      </footer>
+    </main>
+    <script src="panel.js"></script>
+  </body>
+</html>

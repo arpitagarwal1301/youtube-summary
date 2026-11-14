@@ -1,6 +1,6 @@
 # Know It privacy policy
 
-Effective 3 November 2026
+Effective 15 November 2026
 
 Know It for YouTube is a Chrome extension that answers a YouTube video's headline without opening the video. It has no servers of its own, and its developer does not receive any of your data.
 
@@ -11,9 +11,9 @@ When you ask for an answer, the extension sends these to Google's Gemini API, us
 - the video's link, title, channel name and length
 - the description and tags the uploader published on the video's page
 
-Gemini then processes the video from its link. This happens when you click **Know it** on a thumbnail or click the toolbar icon on a video.
+Gemini then processes the video from its link. This happens when you click **Know it** on a thumbnail or on the video you're watching.
 
-If you turn on **Prepare answers in advance**, which is off by default, the same details are also sent for videos under 9 minutes that stay on your screen for a few seconds, even if you never click them.
+If you turn on **Auto**, which is off by default, the same details are also sent for each video under 30 minutes that you open, 5 seconds after you open it, without a click.
 
 Google handles this data under its own terms. On Gemini's free tier, [Google's terms](https://ai.google.dev/gemini-api/terms) say it may use what it receives to improve its products, and that human reviewers may read it. Don't use the extension on anything you wouldn't want treated that way.
 
@@ -21,12 +21,19 @@ Google handles this data under its own terms. On Gemini's free tier, [Google's t
 
 To read a video's description and tags, the extension requests that video's public page from YouTube. It does this without your YouTube cookies, so the request isn't tied to your YouTube account.
 
+## What is requested from GitHub
+
+Once a day, the extension downloads a small settings file from its own public GitHub repository. It holds data only, such as the name of the Gemini model to use and corrected names for parts of YouTube's pages. The request carries no information about you, your key or the videos you watch, and no cookies.
+
 ## What stays in your browser
 
 - **Your Gemini API key.** It is sent only to Google, to make your requests.
-- **Your settings**, such as the model and answer language.
-- **Saved answers**, kept for up to 30 days, up to 500 at a time, so reopening one is instant.
+- **Your settings**, such as the model, answer language, Auto and notifications.
+- **Today's answers**, kept for 24 hours, up to 200 at a time, so you can reopen them and see them in the toolbar panel.
 - **A count of how much video you've used today**, so the extension can stop at the free limit.
+- **A few counters**, such as how many answers you've had, used only to decide when to show a one-time tip. They never leave your browser.
+
+When an answer is ready while YouTube isn't in view, the extension can show a desktop notification with the video's title and the answer. This uses Chrome's own notifications and sends nothing anywhere. You can turn it off in the toolbar panel.
 
 The extension also reads video titles and links on the YouTube pages you open, to place its button and find the video you point at. Those stay in your browser unless you ask for an answer.
 
@@ -41,7 +48,7 @@ The use of information received by this extension complies with the Chrome Web S
 
 ## Deleting your data
 
-Use **Clear saved answers** on the settings page to remove saved answers. Uninstalling the extension removes everything it stored in your browser. To manage what Google holds, or to revoke your key, use your Google account and [Google AI Studio](https://aistudio.google.com/apikey).
+Use **Clear today's answers** under **More → Advanced** in the toolbar panel to remove saved answers. Uninstalling the extension removes everything it stored in your browser. To manage what Google holds, or to revoke your key, use your Google account and [Google AI Studio](https://aistudio.google.com/apikey).
 
 ## Age
 

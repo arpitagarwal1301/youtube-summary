@@ -1,6 +1,6 @@
 {
   "name": "know-it-youtube",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Chrome extension that answers a YouTube headline without opening the video.",
@@ -13,7 +13,8 @@
     "test:real": "node e2e/real-gemini.mjs",
     "try-videos": "node scripts/try-videos.mjs",
     "package": "npm run build && rm -f know-it.zip && cd dist && zip -qr ../know-it.zip . -x '.*'",
-    "store-screenshots": "node scripts/store-screenshots.mjs"
+    "store-screenshots": "node scripts/store-screenshots.mjs",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.7",

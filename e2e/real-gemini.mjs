@@ -1,6 +1,5 @@
 // Runs the production build on real YouTube with the real Gemini, using the key in .env.local.
 // Uses one short video from the daily quota. The key is only placed in a temporary browser profile.
-// With --prefetch, it instead lets advance preparation run for 90 seconds on a page of short videos.
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -11,9 +10,6 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const VIDEO_ID = 'n6OVJf7MnFc';
 const SEARCH = 'https://www.youtube.com/results?search_query=Pristine+Amore+Kalyani+Nagar+HOMES4U';
-const SHORT_VIDEOS = 'https://www.youtube.com/results?search_query=stock+market+explained&sp=EgIYAQ%253D%253D';
-const PREFETCH_TEST_MS = 90_000;
-const prefetchMode = process.argv.includes('--prefetch');
 
 const env = await readFile(join(root, '.env.local'), 'utf8').catch(() => '');
 const apiKey = env.match(/^GEMINI_API_KEY=(.+)$/m)?.[1]?.trim();
@@ -38,42 +34,13 @@ const context = await chromium.launchPersistentContext(profile, {
 let failed = false;
 try {
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
-  await worker.evaluate(async ([key, prefetch]) => {
+  await worker.evaluate(async (key) => {
     const { settings } = await chrome.storage.local.get('settings');
-    await chrome.storage.local.set({ settings: { ...settings, apiKey: key, prefetch } });
-  }, [apiKey, prefetchMode]);
+    await chrome.storage.local.set({ settings: { model: 'auto', language: 'english', autoAnswer: false, notifications: true, ...settings, apiKey: key, version: 2 } });
+  }, apiKey);
 
-  const page = context.pages()[0];
-
-  if (prefetchMode) {
-    await page.goto(SHORT_VIDEOS, { waitUntil: 'domcontentloaded' });
-    const ready = page.locator('know-it-root .marker[data-status="ready"]');
-    const startedAt = Date.now();
-    let lastCount = -1;
-    while (Date.now() - startedAt < PREFETCH_TEST_MS) {
-      const count = await ready.count();
-      if (count !== lastCount) {
-        console.log(`After ${Math.round((Date.now() - startedAt) / 1000)}s: ${count} answers ready`);
-        lastCount = count;
-      }
-      await page.waitForTimeout(1000);
-    }
-    await page.screenshot({ path: join(root, 'e2e/output/real-prepared.png') });
-
-    const { usage } = await worker.evaluate(() => chrome.storage.local.get('usage'));
-    console.log(`Counted towards the daily limit: ${usage?.seconds ?? 0}s`);
-    if ((await ready.count()) === 0) throw new Error('no answers were prepared');
-
-    const started = Date.now();
-    await ready.first().click();
-    await page.locator('know-it-root .popover .answer').waitFor({ timeout: 5000 });
-    console.log(`A prepared answer opened in ${Date.now() - started}ms`);
-    console.log(`Answer: ${await page.locator('know-it-root .popover .answer').textContent()}`);
-    await page.screenshot({ path: join(root, 'e2e/output/real-prepared-answer.png') });
-    await context.close();
-    await rm(profile, { recursive: true, force: true });
-    process.exit(0);
-  }
+  // Installing opens the welcome tab, so use a tab of its own.
+  const page = await context.newPage();
 
   await page.goto(SEARCH, { waitUntil: 'domcontentloaded' });
 
@@ -97,14 +64,12 @@ try {
     console.log(`FAILED after ${seconds}s: ${await popover.locator('.error').textContent()}`);
   } else {
     console.log(`Answered through the extension in ${seconds}s`);
-    console.log(`Question: ${await popover.locator('.question').textContent()}`);
     console.log(`Answer: ${await popover.locator('.answer').textContent()}`);
     console.log(`Key points: ${(await popover.locator('.points li').allTextContents()).join(' | ')}`);
     console.log(`Highlighted: ${(await popover.locator('mark').allTextContents()).join(' | ')}`);
-    console.log(`Tags: ${(await popover.locator('.chip').allTextContents()).join(', ')}`);
-    console.log(`Link: ${await popover.locator('a.evidence').getAttribute('href').catch(() => '(none)')}`);
+    console.log(`Link: ${await popover.locator('a.action').first().getAttribute('href').catch(() => '(none)')}`);
 
-    await popover.getByRole('button', { name: 'Show summary' }).click();
+    await popover.getByRole('button', { name: 'Summary' }).click();
     await page.screenshot({ path: join(root, 'e2e/output/real-gemini-summary.png') });
 
     const { usage } = await worker.evaluate(() => chrome.storage.local.get('usage'));
