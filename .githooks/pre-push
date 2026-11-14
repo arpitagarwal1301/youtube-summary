@@ -1,0 +1,4 @@
+#!/bin/sh
+# Checks the docs agree with the code before pushing. Turn on once per clone: git config core.hooksPath .githooks
+# Skip in an emergency with: git push --no-verify
+exec node "$(git rev-parse --show-toplevel)/scripts/check-docs.mjs"

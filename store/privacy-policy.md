@@ -48,7 +48,7 @@ The use of information received by this extension complies with the Chrome Web S
 
 ## Deleting your data
 
-Use **Clear today's answers** under **More → Advanced** in the toolbar panel to remove saved answers. Uninstalling the extension removes everything it stored in your browser. To manage what Google holds, or to revoke your key, use your Google account and [Google AI Studio](https://aistudio.google.com/apikey).
+Use **Clear today's answers** under **Settings → Advanced** in the Know It panel to remove saved answers. Uninstalling the extension removes everything it stored in your browser. To manage what Google holds, or to revoke your key, use your Google account and [Google AI Studio](https://aistudio.google.com/apikey).
 
 ## Age
 

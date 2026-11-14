@@ -1,0 +1,36 @@
+name: CI
+
+# Type check, unit tests, docs check and a production build, on every push to main and every pull request.
+# The e2e tests drive real YouTube and stay local (npm run test:e2e).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run check-docs
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: know-it
+          path: know-it.zip
+          retention-days: 14

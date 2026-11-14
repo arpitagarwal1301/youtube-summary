@@ -126,10 +126,10 @@ export function describeHttpError(status: number, body: unknown): AnswerError {
     return { code: 'too_long', message: 'This video is too long for Gemini to process in one go.' };
   }
   if (status === 404 || (lower.includes('model') && (lower.includes('not found') || lower.includes('not supported')))) {
-    return { code: 'no_model', message: 'This Gemini model is no longer available. Choose another under More in the Know It panel.' };
+    return { code: 'no_model', message: 'This Gemini model is no longer available. Choose another in the Know It panel, under Settings → Advanced.' };
   }
   if (status === 403) {
-    return { code: 'invalid_key', message: 'Your API key does not have access to this model. Choose another under More in the Know It panel.' };
+    return { code: 'invalid_key', message: 'Your API key does not have access to this model. Choose another in the Know It panel, under Settings → Advanced.' };
   }
   if (lower.includes('video') || lower.includes('file_uri') || lower.includes('fileuri') || lower.includes('youtube')) {
     return { code: 'unavailable', message: 'Gemini cannot open this video. It may be private, unlisted or restricted.' };

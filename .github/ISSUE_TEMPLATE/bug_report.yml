@@ -1,0 +1,32 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead. A screenshot helps.
+    validations:
+      required: true
+  - type: input
+    id: video
+    attributes:
+      label: Video link
+      description: The YouTube video it happened on, if it's about one.
+  - type: input
+    id: version
+    attributes:
+      label: Know It version
+      description: Shown at the bottom of Settings (the ⚙ in Today's answers).
+      placeholder: v1.1.0
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and system
+      placeholder: Chrome 142 on macOS
+  - type: markdown
+    attributes:
+      value: Never paste your Gemini API key here. Security problems go through [Report a vulnerability](https://github.com/arpitagarwal1301/youtube-summary/security/advisories/new) instead.

@@ -40,12 +40,16 @@ const context = await chromium.launchPersistentContext(profile, {
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 1,
   locale: 'en-US',
+  // Dark, like most people watch YouTube. Signed out, YouTube and the panel both follow this.
+  colorScheme: 'dark',
   args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
 });
 
 try {
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   const extensionId = new URL(worker.url()).host;
+  // Signed out, YouTube ignores the system theme. This is the cookie its own Appearance menu sets for Dark.
+  await context.addCookies([{ name: 'PREF', value: 'f6=400&hl=en', domain: '.youtube.com', path: '/' }]);
   const page = await context.newPage();
   const shot = (name) => page.screenshot({ path: join(output, name) });
 
@@ -94,7 +98,7 @@ try {
   await popover.locator('mark').first().waitFor({ state: 'visible', timeout: 5000 });
   await shot('3-answer.png');
 
-  // 4. The toolbar panel, opened as a tab on a dark backdrop at the size Chrome shows it. The key is a placeholder that is never sent.
+  // 4. The toolbar panel, opened as a tab on a darker backdrop at the size Chrome shows it. The key is a placeholder that is never sent.
   await worker.evaluate(async () => {
     const { settings } = await chrome.storage.local.get('settings');
     await chrome.storage.local.set({ settings: { model: 'auto', language: 'english', autoAnswer: false, notifications: true, ...settings, apiKey: 'AIzaSyStoreScreenshotPlaceholder0000', version: 2 } });
@@ -104,7 +108,7 @@ try {
   await page.goto(`chrome-extension://${extensionId}/panel.html`);
   await page.locator('#list .item').first().waitFor({ timeout: 5000 });
   await page.locator('#list .item .expand').first().click();
-  await page.addStyleTag({ content: 'html { background: #2b2523; min-height: 100%; } body { margin: 40px auto !important; box-shadow: 0 12px 40px rgba(0,0,0,.45); border-radius: 12px; overflow: hidden; }' });
+  await page.addStyleTag({ content: 'html { background: #0f0d0c; min-height: 100%; } body { margin: 40px auto !important; box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 0 1px #3d3430; border-radius: 12px; overflow: hidden; }' });
   await page.waitForTimeout(500);
   await shot('4-panel.png');
   console.log(`Saved 4 screenshots to ${output}`);
