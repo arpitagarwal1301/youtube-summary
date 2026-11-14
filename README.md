@@ -1,68 +1,134 @@
-# Know It for YouTube
+<p align="center">
+  <img src=".github/assets/know-it-banner.svg" alt="Know It for YouTube: the answer a clickbait headline is hiding, without watching" width="100%">
+</p>
 
-A Chrome extension that answers a YouTube headline without opening the video. Hover over a thumbnail, click **Know it**, and you get what the title is teasing: the movie name, the stock call, the price. The answer comes as one line and a few points with the key facts highlighted. **Show summary** expands the rest.
+<p align="center">
+  <a href="https://github.com/arpitagarwal1301/youtube-summary/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/arpitagarwal1301/youtube-summary/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
+  <a href="https://github.com/arpitagarwal1301/youtube-summary/releases/latest"><img src="https://img.shields.io/github/v/release/arpitagarwal1301/youtube-summary?style=flat-square&label=download" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome, Manifest V3">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue?style=flat-square" alt="License: PolyForm Noncommercial 1.0.0"></a>
+  <a href="https://github.com/sponsors/arpitagarwal1301"><img src="https://img.shields.io/badge/sponsor-%E2%99%A5-ff7a59?style=flat-square" alt="Sponsor"></a>
+</p>
 
-Gemini watches the video from its URL, so it doesn't need a transcript. The extension also reads the uploader's description and tags, which usually name the film or song that a headline hides.
+> "You won't believe which stock he picked." Now you will, without the 14 minutes.
 
-## How far to trust an answer
+**Know It** is a Chrome extension that answers a YouTube headline without opening the video. Point at a thumbnail, press **Know it**, and you get what the title is teasing: the movie name, the stock call, the price. One line, a few key points, and a timestamp to check it.
 
-Answers come from an AI model and can be wrong, so use the **Check it at** link for anything that matters.
+Gemini watches the video from its link, so no transcript is needed. Know It also reads the uploader's description and tags, which often name the film or song a headline hides. It runs on **your own free Gemini key**, which never leaves your browser except to go to Google.
 
-Gemini can't reliably name a film from faces. In testing it named a different wrong film on each try, at high confidence. So if a film or song name isn't in the video's title, tags, description or channel, the extension lowers the confidence and shows a warning. That warning can also appear when the name was only spoken or shown on screen and was actually right.
+<p align="center">
+  <img src="store/screenshots/3-answer.png" alt="An answer card over YouTube search results, in dark mode" width="80%">
+</p>
 
-## Set up
+## Features
 
-1. Get a free API key from [Google AI Studio](https://aistudio.google.com/apikey).
-2. Run `npm install` and `npm run build`.
-3. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the `dist` folder.
-4. Paste your key into the settings page that opens, and click **Save and test key**.
-5. Refresh any YouTube tabs that were already open.
+- ✨ **Know it on any thumbnail.** Home feed, search, the sidebar and Shorts shelves. The answer opens right beside the video.
+- ▶️ **On the video you're watching.** A button just left of Like, and inside the Shorts player. The timestamp moves the player to the moment that backs up the answer.
+- 📋 **Today's answers on YouTube.** A button beside the mic opens every answer from today, with the minutes Know It saved you.
+- ⚡ **Auto-answer** *(off by default)*. Each video under 30 minutes you open is answered after 5 seconds.
+- 🔔 **Carry on browsing.** A spinner stays on the thumbnail. When the answer is ready it pops up on the page, or as a desktop notification if YouTube isn't in view.
+- 🧭 **Honest about doubt.** A quiet warning appears when the title oversells or a name may be a guess. Every answer has a **Check it at** link.
+- 🔒 **Private by design.** No account, no server, no analytics. Videos go to Google's Gemini with your key, and nothing goes to the maker of Know It.
+- 🌗 **Light and dark**, following YouTube's theme.
+
+## Install
+
+### From a release
+
+1. Download **`know-it.zip`** from the [latest release](https://github.com/arpitagarwal1301/youtube-summary/releases/latest) and unzip it.
+2. Open `chrome://extensions` and turn on **Developer mode**.
+3. Click **Load unpacked** and pick the unzipped folder.
+
+The Chrome Web Store listing is on its way.
+
+### Get a Gemini key
+
+Make a free key in [Google AI Studio](https://aistudio.google.com/apikey) and paste it into the welcome page, or into the popover the first time you press **Know it**.
+
+> **EU, UK and Switzerland:** Google allows only paid keys there. Turn on billing for the key's project first, and Know It works the same.
 
 ## Using it
 
-- **Thumbnails:** hover over a video on the home feed, search, the sidebar or a Shorts shelf, and click **Know it**.
-- **The video you're on:** click the toolbar icon. On any other page, the icon opens settings.
-- **Checking an answer:** the **Check it at** link opens the video at the moment that backs up the answer.
-- **While it loads:** you can move on to other thumbnails. A small spinner stays on the video, and it becomes a sparkle you can click when the answer is ready.
-- **Answers prepared in advance:** off by default, and you can turn it on in settings. Videos under 9 minutes that stay on screen for a few seconds get prepared one at a time, so they open instantly. This sends those videos to Google and counts towards your daily limit even if you never open them, and it stops at 4 of the 8 hours. It doesn't run on a video's own page.
+1. Point at a video on YouTube and press **Know it**.
+2. Read the answer. **Summary** shows the rest, **Copy** shares it with the link.
+3. Open the ✦ button beside YouTube's mic for today's answers. Settings are behind the ⚙ there.
 
-Answers are saved for 30 days, so reopening one is instant and free. **Ask again** gets a new answer and counts towards the daily limit.
+Answers are kept for 24 hours, so reopening one is instant and free. **Ask again** gets a fresh answer.
+
+<p align="center">
+  <img src="store/screenshots/4-panel.png" alt="Today's answers panel in dark mode" width="60%">
+</p>
+
+## How far to trust an answer
+
+Answers come from an AI model and can be wrong, so use **Check it at** for anything that matters.
+
+Gemini can't reliably name a film from faces. In testing it named a different wrong film on each try, at high confidence. So when a film or song name isn't in the video's title, tags, description or channel, Know It marks it as a possible guess. That warning can also appear when the name was only spoken or shown on screen and was right.
 
 ## Limits
 
-- Gemini's free tier allows 8 hours of YouTube video a day, resetting at midnight Pacific time. The extension tracks this itself and stops at the limit. To lift it, change `DAILY_LIMIT_SECONDS` in `src/shared/usage.ts`.
-- Only public videos work. Private and unlisted videos, and live streams still in progress, can't be answered.
-- Free-tier rate limits can occasionally refuse a request, especially after several long videos in a row. Waiting a minute clears it. Check your limits in [AI Studio](https://aistudio.google.com/rate-limit).
-- The default model is Gemini 3.5 Flash-Lite. In testing, Gemini 3.8 Flash was too busy to answer every time. If you choose it and it's busy, the extension switches to Flash-Lite automatically.
-- The daily count only includes answers requested through the extension in this browser, so other use of your key isn't counted.
+- Gemini's free tier allows 8 hours of YouTube video a day, resetting at midnight Pacific time. Know It counts this itself and stops at the limit.
+- Only public videos work. Private and unlisted videos, and live streams in progress, can't be answered.
+- Free-tier rate limits can briefly refuse a request after several long videos. Waiting a minute clears it.
+- The model is **Automatic**: Google's newest Flash-Lite, falling back to `gemini-3.1-flash-lite` when busy. You can pin another under **Settings → Advanced**.
 
-## Commands
+## Privacy
+
+| What | Where it goes |
+|---|---|
+| Your Gemini key | Stays in this browser. Sent only to Google with each request |
+| The video's link, title, channel, description and tags | Google's Gemini API, when you press **Know it** or Auto is on |
+| Saved answers and settings | This browser only, for 24 hours |
+| Anything else | Nowhere. No analytics, no server, no account |
+
+Read the full [privacy policy](store/privacy-policy.md).
+
+## Build from source
+
+Requires Node 22+.
+
+```sh
+git clone https://github.com/arpitagarwal1301/youtube-summary.git
+cd youtube-summary
+npm install
+npm run build
+```
+
+Then load the `dist` folder with **Load unpacked**. See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and tests.
 
 | Command | What it does |
 | --- | --- |
-| `npm run build` | Builds the extension into `dist` |
-| `npm run watch` | Rebuilds on every change |
+| `npm run build` / `npm run watch` | Builds the extension into `dist`, once or on every change |
 | `npm run typecheck` | Checks types |
 | `npm test` | Runs the unit tests |
-| `npm run test:e2e` | Runs the extension on real YouTube with a mock Gemini, saving screenshots to `e2e/output` |
-| `npm run test:real` | Runs the production build on real YouTube with the real Gemini, using one short video from your quota |
-| `npm run try-videos -- <urls>` | Sends real videos to Gemini and prints speed, tokens and answers |
-| `npm run package` | Builds the extension and zips it into `know-it.zip` for the Chrome Web Store |
-| `npm run store-screenshots` | Captures the store screenshots from `dist` into `store/screenshots`, using no API key |
+| `npm run test:e2e` | Runs the extension on real YouTube with a mock Gemini |
+| `npm run test:real` | Runs the production build with the real Gemini, using one short video from your quota |
+| `npm run check-docs` | Checks versions, changelog and links in the docs agree |
+| `npm run package` | Builds and zips the extension into `know-it.zip` |
+| `npm run store-screenshots` | Captures the store screenshots, using no API key |
+| `npm run release -- <version>` | Tags and publishes a GitHub release. See [RELEASING.md](RELEASING.md) |
 
-`npm run test:real -- --prefetch` tries advance preparation for 90 seconds instead, using several short videos from your quota.
+`test:real` and `try-videos` read your key from `.env.local` (`GEMINI_API_KEY=…`), which is never committed.
 
-`test:real` and `try-videos` read your key from a `.env.local` file containing `GEMINI_API_KEY=your-key`. `try-videos` also takes `--model=`, `--resolution=medium`, `--language=video`, `--title="..."` and `--no-details`.
+### How it works
 
-## How it works
+- **`src/content`** draws the buttons and popover from one shadow root, laid over YouTube's page so its re-rendering can't remove them.
+- **`src/background`** holds the key, saved answers and daily limit, reads the video page's details, and raises notifications.
+- **`src/offscreen`** makes the Gemini request, which can outlast a service worker's 30-second limit.
+- **`src/panel`** is today's answers and settings, and **`src/setup`** is the key form shown on YouTube.
+- [`remote-config.json`](remote-config.json) is read once a day. It can change the models, YouTube selectors, links and a one-line notice, without a release. It holds data only, and every value is checked.
 
-- **`src/content`** shows the button and popover from one shadow root, positioned over YouTube's page rather than added to its elements, so YouTube's re-rendering can't remove them.
-- **`src/background`** holds the key, cache and daily limit, reads the video page's details and builds the prompt.
-- **`src/offscreen`** makes the Gemini request. Chrome stops a service worker when a response takes over 30 seconds, and a video can take longer than that.
-- **`src/options`** is the settings page.
+## More
 
-## Publishing
+- [Changelog](CHANGELOG.md): what's new in each version
+- [Contributing](CONTRIBUTING.md) · [Releasing](RELEASING.md) · [Security](SECURITY.md)
+- [Privacy policy](store/privacy-policy.md) · [Store listing](store/listing.md)
+- [License](LICENSE): PolyForm Noncommercial 1.0.0 (noncommercial use; commercial use reserved)
 
-[`store/listing.md`](store/listing.md) has the text for each tab of the Chrome Web Store dashboard, along with what to do before submitting. The privacy policy is [`store/privacy-policy.md`](store/privacy-policy.md).
+## Support
 
-Know It is not affiliated with or endorsed by YouTube or Google.
+Know It is free and made by one person. If it saves you time, [sponsor it on GitHub](https://github.com/sponsors/arpitagarwal1301) ♥. Found a bug or have an idea? [Open an issue](https://github.com/arpitagarwal1301/youtube-summary/issues/new/choose).
+
+---
+
+Built with ✨ by Arpit Agarwal. Not affiliated with or endorsed by YouTube or Google.

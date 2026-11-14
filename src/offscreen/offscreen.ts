@@ -9,7 +9,15 @@ chrome.runtime.onMessage.addListener((message: RunGeminiMessage | { type: string
 
   const { jobKey, job } = message as RunGeminiMessage;
   void addPageDetails(job.video)
-    .then((video) => runGemini({ ...job, video }))
+    .then((video): GeminiDoneMessage['outcome'] | Promise<GeminiDoneMessage['outcome']> => {
+      if (job.maxSeconds !== undefined) {
+        // An automatic request only goes ahead once the page has confirmed the video is short enough.
+        if (video.isLive || video.durationSeconds === undefined || video.durationSeconds > job.maxSeconds) return { ok: false, skipped: true };
+      } else if (video.isLive) {
+        return { ok: false, error: { code: 'unavailable', message: 'Live streams cannot be answered until they have finished.' } };
+      }
+      return runGemini({ ...job, video });
+    })
     .catch((): GeminiDoneMessage['outcome'] => ({
       ok: false,
       error: { code: 'server', message: 'Something went wrong. Try again.' },

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/arpitagarwal1301/youtube-summary/security/advisories/new
+    about: Please report these privately.
+  - name: Sponsor Know It
+    url: https://github.com/sponsors/arpitagarwal1301
+    about: Know It is free and made by one person.

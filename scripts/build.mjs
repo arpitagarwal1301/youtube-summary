@@ -10,13 +10,18 @@ const watch = process.argv.includes('--watch');
 const mockBase = process.env.GEMINI_MOCK_BASE;
 const outDir = join(root, mockBase ? 'dist-e2e' : 'dist');
 const geminiBase = mockBase ?? 'https://generativelanguage.googleapis.com';
+// A small file of corrections in this repository, read at most once a day. See src/shared/remote.ts.
+const configUrl = mockBase
+  ? `${mockBase}/remote-config.json`
+  : 'https://raw.githubusercontent.com/arpitagarwal1301/youtube-summary/main/remote-config.json';
 
 async function copyStatic() {
   await mkdir(outDir, { recursive: true });
   await cp(join(root, 'public'), outDir, { recursive: true });
   await cp(join(root, 'src/offscreen/offscreen.html'), join(outDir, 'offscreen.html'));
-  await cp(join(root, 'src/options/options.html'), join(outDir, 'options.html'));
-  await cp(join(root, 'src/options/options.css'), join(outDir, 'options.css'));
+  await cp(join(root, 'src/panel/panel.html'), join(outDir, 'panel.html'));
+  await cp(join(root, 'src/panel/panel.css'), join(outDir, 'panel.css'));
+  await cp(join(root, 'src/setup/setup.html'), join(outDir, 'setup.html'));
 
   if (mockBase) {
     const manifestPath = join(outDir, 'manifest.json');
@@ -35,13 +40,14 @@ const ctx = await context({
     background: 'src/background/index.ts',
     content: 'src/content/index.ts',
     offscreen: 'src/offscreen/offscreen.ts',
-    options: 'src/options/options.ts',
+    panel: 'src/panel/panel.ts',
+    setup: 'src/setup/setup.ts',
   },
   bundle: true,
   format: 'iife',
   target: 'chrome116',
   outdir: outDir,
-  define: { __GEMINI_BASE__: JSON.stringify(geminiBase) },
+  define: { __GEMINI_BASE__: JSON.stringify(geminiBase), __CONFIG_URL__: JSON.stringify(configUrl) },
   logLevel: 'info',
 });
 

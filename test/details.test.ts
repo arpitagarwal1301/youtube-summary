@@ -40,11 +40,16 @@ describe('addPageDetails', () => {
     expect((fetchMock.mock.calls[0][1] as RequestInit).credentials).toBe('omit');
   });
 
-  it('keeps what the card already knows', async () => {
+  it("trusts the page's length over the card's, which can be rounded or an advert's", async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(page)));
     const result = await addPageDetails({ ...video, durationSeconds: 100 });
-    expect(result.durationSeconds).toBe(100);
+    expect(result.durationSeconds).toBe(773);
     expect(result.title).toBe('Headline');
+  });
+
+  it('notices a stream that is live now', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(page.replace('"videoId"', '"isLiveNow":true,"videoId"'))));
+    expect((await addPageDetails(video)).isLive).toBe(true);
   });
 
   it.each([

@@ -1,5 +1,4 @@
 import { ANSWER_SCHEMA, parseAnswer } from '../shared/answer';
-import { FALLBACK_MODEL } from '../shared/settings';
 import type { AnswerError, GeminiJob, GeminiOutcome, VideoRef } from '../shared/types';
 import { watchUrl } from '../shared/video';
 import { buildPrompt } from './prompt';
@@ -10,7 +9,7 @@ declare const __GEMINI_BASE__: string;
 export const GEMINI_BASE = __GEMINI_BASE__;
 
 const REQUEST_TIMEOUT_MS = 4 * 60 * 1000;
-const CAN_FALL_BACK: AnswerError['code'][] = ['overloaded', 'rate_limited'];
+const CAN_FALL_BACK: AnswerError['code'][] = ['overloaded', 'rate_limited', 'no_model'];
 
 export type MediaResolution = 'MEDIA_RESOLUTION_LOW' | 'MEDIA_RESOLUTION_MEDIUM';
 
@@ -39,11 +38,11 @@ export async function runGemini(
 ): Promise<GeminiOutcome> {
   const deadline = Date.now() + timeoutMs;
   const first = await callModel(job.model, job, mediaResolution, timeoutMs);
-  if (first.ok || job.model === FALLBACK_MODEL || !CAN_FALL_BACK.includes(first.error.code)) return first;
+  if (first.ok || !('error' in first) || job.fallbackModel === job.model || !CAN_FALL_BACK.includes(first.error.code)) return first;
 
-  // Busy periods and free-tier quotas are per model, so another model can often still answer.
+  // Busy periods and free-tier quotas are per model, and Google retires models, so another one can often still answer.
   const remaining = deadline - Date.now();
-  return remaining > 0 ? callModel(FALLBACK_MODEL, job, mediaResolution, remaining) : first;
+  return remaining > 0 ? callModel(job.fallbackModel, job, mediaResolution, remaining) : first;
 }
 
 async function callModel(
@@ -100,15 +99,22 @@ export function interpretResponse(body: unknown, video: VideoRef): GeminiOutcome
     .filter((entry) => entry.modality === 'VIDEO')
     .reduce((sum, entry) => sum + (entry.tokenCount ?? 0), 0);
 
-  return { ok: true, answer, videoTokens, modelVersion: data.modelVersion };
+  return { ok: true, answer, videoTokens, modelVersion: data.modelVersion, video };
 }
 
 export function describeHttpError(status: number, body: unknown): AnswerError {
   const message = ((body as { error?: { message?: string } } | null)?.error?.message ?? '').trim();
   const lower = message.toLowerCase();
 
+  // Free keys are refused in the EU, the UK and Switzerland. A key from a project with billing works there.
+  if (lower.includes('location is not supported') || lower.includes('billing account')) {
+    return {
+      code: 'invalid_key',
+      message: 'Google does not allow free keys where you are. Turn on billing for your key in Google AI Studio, then try again.',
+    };
+  }
   if (lower.includes('api key') || status === 401) {
-    return { code: 'invalid_key', message: 'Gemini did not accept your API key. Check it in settings.' };
+    return { code: 'invalid_key', message: 'Gemini did not accept your API key. Check it in the Know It panel.' };
   }
   if (status === 429) {
     return {
@@ -119,8 +125,11 @@ export function describeHttpError(status: number, body: unknown): AnswerError {
   if (lower.includes('token') && (lower.includes('exceed') || lower.includes('limit'))) {
     return { code: 'too_long', message: 'This video is too long for Gemini to process in one go.' };
   }
+  if (status === 404 || (lower.includes('model') && (lower.includes('not found') || lower.includes('not supported')))) {
+    return { code: 'no_model', message: 'This Gemini model is no longer available. Choose another in the Know It panel, under Settings → Advanced.' };
+  }
   if (status === 403) {
-    return { code: 'invalid_key', message: 'Your API key does not have access to this model. Try another in settings.' };
+    return { code: 'invalid_key', message: 'Your API key does not have access to this model. Choose another in the Know It panel, under Settings → Advanced.' };
   }
   if (lower.includes('video') || lower.includes('file_uri') || lower.includes('fileuri') || lower.includes('youtube')) {
     return { code: 'unavailable', message: 'Gemini cannot open this video. It may be private, unlisted or restricted.' };

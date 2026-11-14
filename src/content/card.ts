@@ -1,25 +1,32 @@
 import type { VideoRef } from '../shared/types';
+import { DEFAULT_SELECTORS, type SelectorName } from '../shared/remote';
 import { parseClock, parseVideoId } from '../shared/video';
 
-const CARD_SELECTOR = [
-  'yt-lockup-view-model',
-  'ytm-shorts-lockup-view-model',
-  'ytm-shorts-lockup-view-model-v2',
-  'ytd-rich-item-renderer',
-  'ytd-video-renderer',
-  'ytd-compact-video-renderer',
-  'ytd-grid-video-renderer',
-  'ytd-playlist-video-renderer',
-  'ytd-playlist-panel-video-renderer',
-  'ytd-reel-item-renderer',
-].join(',');
-
-const AD_SELECTOR = 'ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer';
-const THUMBNAIL_IMAGE = 'img, yt-image, yt-thumbnail-view-model, ytd-thumbnail';
 const TITLE_SELECTORS = ['#video-title', 'h3 [title]', 'h3', '[class*="title"]'];
 const CHANNEL_SELECTORS = ['ytd-channel-name #text', 'a[href^="/@"]', 'a[href^="/channel/"]', 'a[href^="/c/"]'];
-const LIVE_MARKER_SELECTOR = 'ytd-thumbnail[is-live-video], badge-shape[class*="BadgeShapeLive"], badge-shape[aria-label="LIVE" i]';
 const CHANNEL_AREA_SELECTOR = '[class*="avatar" i], a[href^="/@"], a[href^="/channel/"], a[href^="/c/"]';
+
+/** YouTube renames its elements from time to time, so these can be corrected by the remote settings file. */
+let selectors: Record<SelectorName, string> = { ...DEFAULT_SELECTORS };
+
+/** Takes corrected selectors, keeping the built-in one wherever a new one is not valid CSS. */
+export function setSelectors(next: Partial<Record<string, string>>): void {
+  const probe = document.createDocumentFragment();
+  for (const name of Object.keys(DEFAULT_SELECTORS) as SelectorName[]) {
+    const value = next[name];
+    if (!value) continue;
+    try {
+      probe.querySelector(value);
+      selectors[name] = value;
+    } catch {
+      selectors[name] = DEFAULT_SELECTORS[name];
+    }
+  }
+}
+
+export function selector(name: SelectorName): string {
+  return selectors[name];
+}
 
 export interface FoundVideo {
   video: VideoRef;
@@ -28,9 +35,9 @@ export interface FoundVideo {
 
 /** Finds the video card under an element. YouTube renames its classes often, so this leans on video links. */
 export function findVideoAt(target: Element): FoundVideo | null {
-  if (target.closest(AD_SELECTOR)) return null;
+  if (target.closest(selectors.ad)) return null;
 
-  const card = target.closest(CARD_SELECTOR);
+  const card = target.closest(selectors.card);
   const thumbnail = card ? findThumbnailLink(card) : standaloneThumbnail(target);
   if (!thumbnail) return null;
 
@@ -56,13 +63,13 @@ export function findVideoAt(target: Element): FoundVideo | null {
 function hasLiveMarker(root: Element, thumbnailTexts: string[]): boolean {
   if (thumbnailTexts.some((text) => /^live( now)?$/i.test(text))) return true;
   // A channel avatar can show its own LIVE ring on a card for a normal video.
-  return [...root.querySelectorAll(LIVE_MARKER_SELECTOR)].some((marker) => !marker.closest(CHANNEL_AREA_SELECTOR));
+  return [...root.querySelectorAll(selectors.liveMarker)].some((marker) => !marker.closest(CHANNEL_AREA_SELECTOR));
 }
 
 /** Videos whose thumbnails are at least half on screen, top of the page first. */
 export function findVisibleVideos(doc: Document, viewportWidth: number, viewportHeight: number): FoundVideo[] {
   const found = new Map<string, FoundVideo>();
-  for (const card of doc.querySelectorAll(CARD_SELECTOR)) {
+  for (const card of doc.querySelectorAll(selectors.card)) {
     if (!isMostlyOnScreen(card.getBoundingClientRect(), viewportWidth, viewportHeight, 0)) continue;
     const video = findVideoAt(card);
     if (!video || found.has(video.video.videoId)) continue;
@@ -82,7 +89,7 @@ function isMostlyOnScreen(rect: DOMRect, viewportWidth: number, viewportHeight: 
 
 function findThumbnailLink(card: Element): Element | null {
   for (const link of card.querySelectorAll('a[href]')) {
-    if (parseVideoId(link.getAttribute('href') ?? '') && link.querySelector(THUMBNAIL_IMAGE)) return link;
+    if (parseVideoId(link.getAttribute('href') ?? '') && link.querySelector(selectors.thumbnailImage)) return link;
   }
   return null;
 }
@@ -91,7 +98,7 @@ function findThumbnailLink(card: Element): Element | null {
 function standaloneThumbnail(target: Element): Element | null {
   const link = target.closest('a[href]');
   if (!link || !parseVideoId(link.getAttribute('href') ?? '')) return null;
-  return link.querySelector(THUMBNAIL_IMAGE) ? link : null;
+  return link.querySelector(selectors.thumbnailImage) ? link : null;
 }
 
 function readTitle(root: Element, thumbnail: Element): string {
@@ -130,17 +137,76 @@ export function readCurrentPageVideo(doc: Document, href: string): VideoRef | nu
   const videoId = parseVideoId(href);
   if (!videoId) return null;
 
-  const heading = doc.querySelector('h1.ytd-watch-metadata, ytd-watch-metadata h1, h1.title');
+  const heading = doc.querySelector(selectors.watchHeading);
   const video: VideoRef = {
     videoId,
-    title: heading?.textContent?.trim() || doc.title.replace(/ - YouTube$/, '').trim(),
-    channel: doc.querySelector('#owner ytd-channel-name a, ytd-video-owner-renderer ytd-channel-name a')?.textContent?.trim(),
+    title: heading?.textContent?.trim() || doc.title.replace(/^\(\d+\)\s*/, '').replace(/ - YouTube$/, '').trim(),
+    channel: doc.querySelector(selectors.watchChannel)?.textContent?.trim(),
   };
+  if (new URL(href, 'https://www.youtube.com').pathname.startsWith('/shorts/')) video.isShort = true;
 
-  const player = doc.querySelector<HTMLVideoElement>('video.html5-main-video');
-  if (player) {
+  // While an advert plays, the player reports the advert's length, not the video's.
+  const player = doc.querySelector<HTMLVideoElement>(selectors.mainVideo);
+  if (player && !doc.querySelector(selectors.adPlaying)) {
     if (player.duration === Infinity) video.isLive = true;
     else if (player.duration > 0) video.durationSeconds = Math.round(player.duration);
   }
   return video;
+}
+
+/** Where the button for the open video goes: beside the title on a watch page, beside the player on a Shorts page. */
+export function findPageAnchor(doc: Document, pathname: string): { element: Element; kind: 'watch' | 'shorts' } | null {
+  if (pathname === '/watch') {
+    const element = [...doc.querySelectorAll(selectors.watchTitle)].find(isLaidOut);
+    return element ? { element, kind: 'watch' } : null;
+  }
+  if (pathname.startsWith('/shorts/')) {
+    const element = [...doc.querySelectorAll(selectors.shortsPlayer)].find(isLaidOut);
+    return element ? { element, kind: 'shorts' } : null;
+  }
+  return null;
+}
+
+/**
+ * The free space at the left end of YouTube's row of video actions, between the channel and the first action button.
+ * Returns where that first button starts and the row's middle, or null if the row is not there or too crowded.
+ */
+export function findActionsSpot(doc: Document, width: number): { right: number; middle: number } | null {
+  const row = [...doc.querySelectorAll(selectors.watchActions)].find(isLaidOut);
+  if (!row) return null;
+  const buttons = [...row.querySelectorAll('button')].map((button) => button.getBoundingClientRect()).filter((rect) => rect.width > 0 && rect.height > 0);
+  if (buttons.length === 0) return null;
+  const first = buttons.reduce((leftmost, rect) => (rect.left < leftmost.left ? rect : leftmost));
+  const owner = [...doc.querySelectorAll(selectors.watchOwner)].find(isLaidOut)?.getBoundingClientRect();
+  const right = first.left - ACTIONS_GAP;
+  if (owner && right - width < owner.right + ACTIONS_GAP && owner.bottom > first.top && owner.top < first.bottom) return null;
+  return { right, middle: first.top + first.height / 2 };
+}
+const ACTIONS_GAP = 12;
+
+/** Where Know It's button goes in YouTube's top bar: right of the microphone, or of the search box if there is none. */
+export function findMastheadSpot(doc: Document, size: number): { left: number; top: number } | null {
+  const after = [...doc.querySelectorAll(selectors.mastheadMic)].find(isLaidOut) ?? [...doc.querySelectorAll(selectors.mastheadSearch)].find(isLaidOut);
+  if (!after) return null;
+  const rect = after.getBoundingClientRect();
+  if (rect.bottom <= 0) return null;
+  const left = rect.right + MASTHEAD_GAP;
+  const end = [...doc.querySelectorAll(selectors.mastheadEnd)].find(isLaidOut)?.getBoundingClientRect();
+  if (end && left + size + MASTHEAD_GAP > end.left) return null;
+  return { left, top: rect.top + rect.height / 2 - size / 2 };
+}
+const MASTHEAD_GAP = 8;
+
+function isLaidOut(element: Element): boolean {
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+/** Moves the open video to a moment, if it is the main player on this page. Returns false if there is none. */
+export function seekPageVideo(doc: Document, seconds: number): boolean {
+  const player = doc.querySelector<HTMLVideoElement>(selectors.mainVideo);
+  if (!player || doc.querySelector(selectors.adPlaying)) return false;
+  player.currentTime = seconds;
+  void player.play().catch(() => undefined);
+  return true;
 }
