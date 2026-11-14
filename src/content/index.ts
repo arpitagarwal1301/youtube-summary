@@ -56,11 +56,11 @@ const MARKER_LABELS: Record<VideoStatus, string> = {
   failed: 'This one did not work. Click to see why.',
 };
 
-declare global {
-  interface Window {
-    __knowItLoaded?: boolean;
-  }
-}
+/**
+ * Sent on the page by a newer copy of this script, as it starts. After an update, Chrome cuts the old copy off
+ * from the extension but leaves it running on open tabs, so it has to clear itself away. DOM events reach every copy.
+ */
+const REPLACE_EVENT = 'know-it-replace';
 
 /** The three icons a control can show. Its status decides which one is visible. */
 function statusIcons(): Element[] {
@@ -72,6 +72,10 @@ function statusIcons(): Element[] {
 function start(): void {
   // The UI lives in one shadow root on the page, never inside YouTube's own elements.
   // YouTube re-renders its cards constantly, and this way nothing has to be re-attached.
+  /** Ends every listener on the page and window when this copy stops. */
+  const lifetime = new AbortController();
+  const { signal } = lifetime;
+
   const host = document.createElement('know-it-root');
   const shadow = host.attachShadow({ mode: 'open' });
   const root = element('div', 'root');
@@ -261,10 +265,14 @@ function start(): void {
 
   // The list's own close button and Escape key, from inside its frame. Only the extension's own page is listened to.
   const extensionOrigin = new URL(chrome.runtime.getURL('')).origin;
-  window.addEventListener('message', (event) => {
-    if (event.origin !== extensionOrigin || event.source !== drawer.querySelector('iframe')?.contentWindow) return;
-    if ((event.data as { type?: string } | null)?.type === 'know-it-close') closeDrawer();
-  });
+  window.addEventListener(
+    'message',
+    (event) => {
+      if (event.origin !== extensionOrigin || event.source !== drawer.querySelector('iframe')?.contentWindow) return;
+      if ((event.data as { type?: string } | null)?.type === 'know-it-close') closeDrawer();
+    },
+    { signal },
+  );
 
   topButton.addEventListener('click', () => {
     if (drawer.classList.contains('visible')) closeDrawer();
@@ -634,8 +642,10 @@ function start(): void {
 
   let scanning = false;
   async function scan(): Promise<void> {
+    // Cut off from the extension, by an update or an uninstall. A button that can't answer is worse than none,
+    // and after an update the new copy has already been added to this page.
     if (!chrome.runtime?.id) {
-      window.clearInterval(scanTimer);
+      stop();
       return;
     }
     if (document.hidden || scanning) return;
@@ -689,7 +699,7 @@ function start(): void {
       placeButton();
       renderMarkers();
     },
-    { capture: true, passive: true },
+    { capture: true, passive: true, signal },
   );
 
   let frame = 0;
@@ -702,8 +712,8 @@ function start(): void {
       placePopover();
     });
   };
-  window.addEventListener('scroll', reposition, { capture: true, passive: true });
-  window.addEventListener('resize', reposition, { passive: true });
+  window.addEventListener('scroll', reposition, { capture: true, passive: true, signal });
+  window.addEventListener('resize', reposition, { passive: true, signal });
 
   document.addEventListener(
     'pointerdown',
@@ -712,15 +722,19 @@ function start(): void {
       if (popover.classList.contains('visible')) closePopover();
       if (drawer.classList.contains('visible')) closeDrawer();
     },
-    { capture: true, passive: true },
+    { capture: true, passive: true, signal },
   );
 
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && popover.classList.contains('visible')) closePopover();
-    if (event.key === 'Escape' && drawer.classList.contains('visible')) closeDrawer();
-  });
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key === 'Escape' && popover.classList.contains('visible')) closePopover();
+      if (event.key === 'Escape' && drawer.classList.contains('visible')) closeDrawer();
+    },
+    { signal },
+  );
 
-  document.addEventListener('visibilitychange', scheduleAuto);
+  document.addEventListener('visibilitychange', scheduleAuto, { signal });
 
   // YouTube changes page without a reload, so nothing from the last page should linger.
   document.addEventListener('yt-navigate-start', () => {
@@ -732,13 +746,13 @@ function start(): void {
     releaseTitleSpace();
     placeButton();
     renderMarkers();
-  });
+  }, { signal });
   document.addEventListener('yt-navigate-finish', () => {
     renderPageBar();
     scheduleAuto();
-  });
+  }, { signal });
 
-  chrome.runtime.onMessage.addListener((message: TabMessage, _sender, sendResponse: (reply: ReadyReply) => void) => {
+  const onMessage = (message: TabMessage, _sender: chrome.runtime.MessageSender, sendResponse: (reply: ReadyReply) => void): boolean => {
     if (message.type === 'STATE_CHANGED') {
       applyState(message.state);
     } else if (message.type === 'OPEN_ANSWER') {
@@ -761,7 +775,24 @@ function start(): void {
       }
     }
     return false;
-  });
+  };
+  chrome.runtime.onMessage.addListener(onMessage);
+
+  /** Takes this copy off the page: its buttons, popover, timers and listeners. */
+  function stop(): void {
+    lifetime.abort();
+    window.clearInterval(scanTimer);
+    window.clearTimeout(autoTimer);
+    view.stopTimer();
+    releaseTitleSpace();
+    host.remove();
+    try {
+      chrome.runtime.onMessage.removeListener(onMessage);
+    } catch {
+      // Already cut off from the extension.
+    }
+  }
+  document.addEventListener(REPLACE_EVENT, stop, { once: true, signal });
 
   void send<PageState>({ type: 'GET_STATE' })
     .then(applyState)
@@ -774,8 +805,8 @@ function isInside(element: Element, x: number, y: number): boolean {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
-// On first install the script is also injected into tabs that were already open.
-if (!window.__knowItLoaded) {
-  window.__knowItLoaded = true;
-  start();
-}
+// After an install or update the script is also added to tabs that were already open, where an older copy
+// may still be running. It hands over to this one. Copies from before 1.2.0 don't listen, so their UI is removed directly.
+document.dispatchEvent(new CustomEvent(REPLACE_EVENT));
+for (const old of document.querySelectorAll('know-it-root')) old.remove();
+start();

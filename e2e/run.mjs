@@ -1044,6 +1044,27 @@ async function run() {
     });
     await panel.close();
 
+    console.log('Update');
+    await check('a newer copy added to an open tab takes over from the old one, as after an update', async () => {
+      await page.goto('https://www.youtube.com/results?search_query=weekend+investing', { waitUntil: 'domcontentloaded' });
+      await page.locator('know-it-root .topbar-button').waitFor({ state: 'visible', timeout: 15000 });
+      // Marks the copy running now, to tell it apart from the one added next.
+      await page.evaluate(() => document.querySelector('know-it-root').setAttribute('data-old', ''));
+      // What the service worker does for open YouTube tabs after an install or update.
+      // (Headless Chrome can't reload an extension loaded from the command line, so the update itself isn't run.)
+      await worker.evaluate(async () => {
+        const tabs = await chrome.tabs.query({ url: 'https://www.youtube.com/*' });
+        await Promise.all(tabs.map((tab) => chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] })));
+      });
+      await page.waitForFunction(() => document.querySelectorAll('know-it-root').length === 1 && !document.querySelector('know-it-root[data-old]'), null, { timeout: 10000 });
+      const fresh = await firstThumbnail(page);
+      await hoverUntilButton(fresh);
+      await button.click();
+      await popover.waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('know-it-root .popover .answer, know-it-root .popover .loading').first().waitFor({ timeout: 10000 });
+      assert((await page.locator('know-it-root').count()) === 1, 'more than one copy on the page');
+    });
+
     thumb = null;
   } finally {
     await context.close();
