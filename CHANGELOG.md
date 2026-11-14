@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+Fixed
+
+- After an update, YouTube tabs that were already open switch to the new version straight away. Before, their button stopped working until the page was reloaded.
+
 ## 1.1.0 — Answers right on YouTube
 
 New

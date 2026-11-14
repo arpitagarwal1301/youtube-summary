@@ -366,14 +366,16 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   void removeOld();
   void refreshRemoteConfig();
-  if (reason !== chrome.runtime.OnInstalledReason.INSTALL) return;
+  const { INSTALL, UPDATE } = chrome.runtime.OnInstalledReason;
+  if (reason !== INSTALL && reason !== UPDATE) return;
 
-  // YouTube tabs that were already open get the button without a reload.
+  // YouTube tabs that were already open get the button without a reload. After an update, the copy already there
+  // has been cut off from the extension, and hands over to this one.
   const tabs = await chrome.tabs.query({ url: YOUTUBE_TABS });
   for (const tab of tabs) {
     if (tab.id !== undefined) chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).catch(() => undefined);
   }
-  await chrome.tabs.create({ url: chrome.runtime.getURL(`${PANEL_TAB}&welcome=1`) });
+  if (reason === INSTALL) await chrome.tabs.create({ url: chrome.runtime.getURL(`${PANEL_TAB}&welcome=1`) });
 });
 
 
