@@ -16,6 +16,26 @@ Load the `dist` folder from `chrome://extensions` with **Developer mode** on and
 
 The last command turns on a **pre-push hook** that runs [`scripts/check-docs.mjs`](scripts/check-docs.mjs), a fast check that the docs stay in sync: the version matches in `package.json` and `public/manifest.json`, the changelog has that version, and internal links resolve. The same check runs in CI on every push and pull request. Bypass the hook in an emergency with `git push --no-verify`.
 
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run build` / `npm run watch` | Builds the extension into `dist`, once or on every change |
+| `npm run typecheck` | Checks types |
+| `npm test` | Runs the unit tests |
+| `npm run test:e2e` | Runs the extension on real YouTube with a mock Gemini |
+| `npm run test:real` | Runs the production build with the real Gemini, using one short video from your quota |
+| `npm run check-docs` | Checks versions, changelog and links in the docs agree |
+| `npm run package` | Builds and zips the extension into `know-it.zip` |
+| `npm run store-screenshots` | Captures the store screenshots, using no API key |
+| `npm run release -- <version>` | Tags and publishes a GitHub release. See [RELEASING.md](RELEASING.md) |
+
+`test:real` and `try-videos` read your key from `.env.local` (`GEMINI_API_KEY=…`), which is never committed.
+
+## How the code is laid out
+
+
+
 ## Before you open a pull request
 
 ```sh
