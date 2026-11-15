@@ -107,7 +107,7 @@ The extension needs a Gemini API key. Use this test key:
 REPLACE_WITH_A_SPARE_TEST_KEY
 
 1. On the welcome page that opens after installing, paste the key and click "Save and test".
-2. Open https://www.youtube.com/results?search_query=stocks+explained+with+bananas
+2. Open https://www.youtube.com/results?search_query=buy+every+share+you+can+nvidia+ceo+new+favorite+stock
 3. Hover over a video's thumbnail and click "Know it" at its top left.
 4. The answer appears in a popover next to the thumbnail, usually within about 30 seconds.
 5. Click the toolbar icon to see today's answers and the settings.
