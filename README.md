@@ -63,7 +63,7 @@ Real answers Know It gave, not written by hand.
     <td width="50%" valign="top">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/panel-dark.jpg">
-        <img src=".github/assets/readme/panel-light.jpg" alt="The Today's answers panel with minutes saved">
+        <img src=".github/assets/readme/panel-light.jpg" alt="Today's answers opened from the Know It button in YouTube's top bar, listing three answers and the minutes saved">
       </picture>
       <b>Today's answers.</b> Everything you asked today and the minutes it saved you, from YouTube's top bar or Chrome's toolbar.
     </td>
