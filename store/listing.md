@@ -6,7 +6,7 @@ Text to paste into each tab of the [developer dashboard](https://chrome.google.c
 
 1. Create a spare free Gemini key for the reviewer (see **Test instructions**).
 
-The privacy policy is live at https://github.com/arpitagarwal1301/youtube-summary/blob/main/store/privacy-policy.md
+The privacy policy is live at https://getknowit.github.io/privacy
 
 ## Store listing tab
 
@@ -87,7 +87,7 @@ Answers the headline of a YouTube video without opening it: the user clicks a bu
 - Not used for purposes unrelated to the single purpose.
 - Not used to determine creditworthiness or for lending.
 
-**Privacy policy URL:** https://github.com/arpitagarwal1301/youtube-summary/blob/main/store/privacy-policy.md
+**Privacy policy URL:** https://getknowit.github.io/privacy
 
 ## Distribution tab
 

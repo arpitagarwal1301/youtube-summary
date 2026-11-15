@@ -36,7 +36,7 @@ await build({
     contents: `export { runGemini } from './src/background/gemini.ts';
       export { addPageDetails } from './src/background/details.ts';
       export { parseVideoId } from './src/shared/video.ts';
-      export { DEFAULT_MODEL } from './src/shared/settings.ts';`,
+      export { DEFAULT_CONFIG } from './src/shared/remote.ts';`,
     resolveDir: root,
   },
   bundle: true,
@@ -45,7 +45,8 @@ await build({
   outfile: bundle,
   define: { __GEMINI_BASE__: JSON.stringify('https://generativelanguage.googleapis.com') },
 });
-const { runGemini, addPageDetails, parseVideoId, DEFAULT_MODEL } = await import(pathToFileURL(bundle).href);
+const { runGemini, addPageDetails, parseVideoId, DEFAULT_CONFIG } = await import(pathToFileURL(bundle).href);
+const DEFAULT_MODEL = DEFAULT_CONFIG.models.auto;
 await rm(tempDir, { recursive: true, force: true });
 
 const model = option('model', DEFAULT_MODEL);

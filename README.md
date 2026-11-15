@@ -7,6 +7,7 @@
   <a href="https://github.com/arpitagarwal1301/youtube-summary/releases/latest"><img src="https://img.shields.io/github/v/release/arpitagarwal1301/youtube-summary?style=flat-square&label=download" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome, Manifest V3">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue?style=flat-square" alt="License: PolyForm Noncommercial 1.0.0"></a>
+  <a href="https://getknowit.github.io"><img src="https://img.shields.io/badge/website-getknowit.github.io-b4491f?style=flat-square" alt="Website"></a>
   <a href="https://github.com/sponsors/arpitagarwal1301"><img src="https://img.shields.io/badge/sponsor-%E2%99%A5-ff7a59?style=flat-square" alt="Sponsor"></a>
 </p>
 
@@ -15,6 +16,8 @@
 **Know It** is a Chrome extension that answers a YouTube headline without opening the video. Point at a thumbnail, press **Know it**, and you get what the title is teasing: the movie name, the stock call, the price. One line, a few key points, and a timestamp to check it.
 
 Gemini watches the video from its link, so no transcript is needed. Know It also reads the uploader's description and tags, which often name the film or song a headline hides. It runs on **your own free Gemini key**, which never leaves your browser except to go to Google.
+
+**Website:** [getknowit.github.io](https://getknowit.github.io): try six real answers, watch the demo, and install.
 
 <p align="center">
   <img src="store/screenshots/3-answer.png" alt="An answer card over YouTube search results, in dark mode" width="80%">
