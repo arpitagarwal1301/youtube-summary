@@ -51,14 +51,15 @@ export const DEFAULT_SELECTORS = {
 export type SelectorName = keyof typeof DEFAULT_SELECTORS;
 
 const REPO = 'https://github.com/arpitagarwal1301/youtube-summary';
+const SITE = 'https://getknowit.github.io';
 export const DEFAULT_LINKS = {
   github: REPO,
   whatsNew: `${REPO}/releases`,
   sponsor: 'https://github.com/sponsors/arpitagarwal1301',
   feedback: 'mailto:arpitvinshu@gmail.com?subject=Know%20It%20feedback',
   /** Added to answers that are copied, so people who see one can find the extension. */
-  share: REPO,
-  privacy: `${REPO}/blob/main/store/privacy-policy.md`,
+  share: SITE,
+  privacy: `${SITE}/privacy`,
   getKey: 'https://aistudio.google.com/apikey',
 } as const;
 export type LinkName = keyof typeof DEFAULT_LINKS;
@@ -71,7 +72,7 @@ export const DEFAULT_CONFIG: RemoteConfig = {
 };
 
 /** A changed link must still lead somewhere the project controls, or to Google's own pages. */
-const LINK_HOSTS = ['github.com', 'chromewebstore.google.com', 'aistudio.google.com'];
+const LINK_HOSTS = ['github.com', 'getknowit.github.io', 'chromewebstore.google.com', 'aistudio.google.com'];
 const MODEL_NAME = /^[a-z0-9][a-z0-9.-]{2,59}$/;
 const MAX_SELECTOR_LENGTH = 800;
 const MAX_NOTICE_LENGTH = 200;

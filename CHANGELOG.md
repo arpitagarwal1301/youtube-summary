@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Changed
+
+- Copied answers link to the new [Know It website](https://getknowit.github.io), and **Privacy** in Settings opens the policy there.
+
 Fixed
 
 - After an update, YouTube tabs that were already open switch to the new version straight away. Before, their button stopped working until the page was reloaded.
