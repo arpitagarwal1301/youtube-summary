@@ -10,7 +10,7 @@ The privacy policy is live at https://getknowit.github.io/privacy
 
 The listing is live at https://chromewebstore.google.com/detail/know-it-for-youtube/nilkfcjmledjkedlljnggfohkpbibigc
 
-**Small promo tile:** `store/promo-small.jpg` (440×280)
+**Small promo tile:** `store/promo-small.jpg` (440×280). **Marquee promo tile:** `store/promo-marquee.jpg` (1400×560)
 
 ## Store listing tab
 
