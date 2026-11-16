@@ -4,8 +4,8 @@
 </picture>
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/know-it-for-youtube/nilkfcjmledjkedlljnggfohkpbibigc"><b>Add to Chrome</b></a> ·
   <a href="https://getknowit.github.io">Website</a> ·
-  <a href="https://github.com/arpitagarwal1301/youtube-summary/releases/latest">Download</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
   <a href="https://github.com/sponsors/arpitagarwal1301">Sponsor ♥</a>
 </p>
@@ -74,11 +74,12 @@ Real answers Know It gave, not written by hand.
 
 ## Install
 
-1. Download `know-it.zip` from the [latest release](https://github.com/arpitagarwal1301/youtube-summary/releases/latest) and unzip it.
-2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the folder.
-3. Press **Know it** on any video and paste a free key from [Google AI Studio](https://aistudio.google.com/apikey).
+1. Add [Know It from the Chrome Web Store](https://chromewebstore.google.com/detail/know-it-for-youtube/nilkfcjmledjkedlljnggfohkpbibigc).
+2. Press **Know it** on any YouTube video and paste a free key from [Google AI Studio](https://aistudio.google.com/apikey).
 
-In the EU, the UK and Switzerland, Google only allows paid keys: turn on billing for the key first. The Chrome Web Store listing is on its way.
+In the EU, the UK and Switzerland, Google only allows paid keys: turn on billing for the key first.
+
+Prefer the zip? Download `know-it.zip` from the [latest release](https://github.com/arpitagarwal1301/youtube-summary/releases/latest), unzip it, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the folder.
 
 ## Good to know
 

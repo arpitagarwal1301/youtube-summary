@@ -8,6 +8,10 @@ Text to paste into each tab of the [developer dashboard](https://chrome.google.c
 
 The privacy policy is live at https://getknowit.github.io/privacy
 
+The listing is live at https://chromewebstore.google.com/detail/know-it-for-youtube/nilkfcjmledjkedlljnggfohkpbibigc
+
+**Small promo tile:** `store/promo-small.jpg` (440×280)
+
 ## Store listing tab
 
 **Name** (comes from the manifest): Know It for YouTube
