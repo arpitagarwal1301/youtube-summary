@@ -991,6 +991,18 @@ async function run() {
       await list.locator('#close').click();
       await page.locator('know-it-root .drawer').waitFor({ state: 'hidden', timeout: 3000 });
     });
+    await check('Copy in today’s answers on the page puts the answer on the clipboard', async () => {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'https://www.youtube.com' });
+      await page.evaluate(() => navigator.clipboard.writeText('before'));
+      await page.locator('know-it-root .topbar-button').click();
+      const list = page.frameLocator('know-it-root .drawer iframe');
+      await list.locator('.expand').first().click();
+      await list.getByRole('button', { name: 'Copy' }).first().click();
+      await list.getByText('Copied').waitFor({ timeout: 3000 });
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      assert(copied.includes('MOCK ANSWER'), `clipboard has ${JSON.stringify(copied.slice(0, 80))}`);
+      await list.locator('#close').click();
+    });
 
     console.log('Toolbar panel');
     const panel = await context.newPage();

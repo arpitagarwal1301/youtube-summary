@@ -247,6 +247,8 @@ function start(): void {
     if (!frame || drawerTheme !== theme || hash) {
       const next = element('iframe', 'drawer-frame');
       next.title = "Know It: today's answers";
+      // Lets the list's Copy button write to the clipboard from inside YouTube.
+      next.allow = 'clipboard-write';
       next.src = chrome.runtime.getURL(`panel.html?embed=1&theme=${theme}${hash}`);
       drawer.replaceChildren(next);
       drawerTheme = theme;
@@ -269,7 +271,13 @@ function start(): void {
     'message',
     (event) => {
       if (event.origin !== extensionOrigin || event.source !== drawer.querySelector('iframe')?.contentWindow) return;
-      if ((event.data as { type?: string } | null)?.type === 'know-it-close') closeDrawer();
+      const data = event.data as { type?: string; id?: string; text?: string } | null;
+      if (data?.type === 'know-it-close') closeDrawer();
+      // Copy from the list, when its frame isn't allowed to. The click in the frame counts as a click on this page.
+      if (data?.type === 'know-it-copy' && typeof data.text === 'string' && event.source) {
+        const reply = (ok: boolean) => (event.source as Window).postMessage({ type: 'know-it-copied', id: data.id, ok }, extensionOrigin);
+        navigator.clipboard.writeText(data.text).then(() => reply(true), () => reply(false));
+      }
     },
     { signal },
   );
