@@ -2,6 +2,7 @@
 // No API key or sign-in is used. Screenshots go to e2e/output.
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -14,6 +15,7 @@ const PORT = 8765;
 const MOCK_BASE = `http://127.0.0.1:${PORT}`;
 const FAKE_KEY = 'fake-e2e-key';
 const SLOW_MS = 40_000;
+const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 
 // ---- Mock Gemini, and the remote config file ----
 
@@ -98,6 +100,8 @@ async function check(name, fn) {
   } catch (err) {
     results.push({ name, ok: false });
     console.log(`  FAIL  ${name}\n        ${String(err.message).split('\n')[0]}`);
+    // E2E_VERBOSE=1 prints Playwright's call log, which names whatever blocked a hover or click.
+    if (process.env.E2E_VERBOSE) console.log(String(err.message).split('\n').slice(1, 25).join('\n'));
     if (activePage) {
       const slug = name.replace(/\W+/g, '-').slice(0, 40);
       await activePage.screenshot({ path: join(output, `fail-${slug}.png`) }).catch(() => undefined);
@@ -111,18 +115,79 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-/** First video card thumbnail on screen, with its video ID. */
+// Channel cards, shelves and ads on results pages load late and push or cover the plain video rows,
+// so pages that don't test them hide them, and the tests keep only plain video rows.
+const CLUTTER = [
+  'ytd-channel-renderer',
+  'yt-official-card-view-model',
+  'ytd-shelf-renderer',
+  'ytd-reel-shelf-renderer',
+  'grid-shelf-view-model',
+  'ytd-horizontal-card-list-renderer',
+  'ytd-ad-slot-renderer',
+  'ytd-search-pyv-renderer',
+  'ytd-promoted-video-renderer',
+  'ytd-in-feed-ad-layout-renderer',
+];
+async function hideClutter(page) {
+  await page.addStyleTag({ content: `${CLUTTER.join(', ')} { display: none !important; }` });
+}
+
+/**
+ * A locator for one thumbnail link, found by its href rather than its position,
+ * so it keeps pointing at the same video when YouTube adds or reorders cards.
+ */
+function pinned(page, href, scope = '') {
+  const at = `${scope} a[href="${href.replace(/"/g, '\\"')}"]`;
+  return page.locator(`${at}:has(img), ${at}:has(yt-thumbnail-view-model)`).filter({ visible: true }).first();
+}
+
+/** Plain video rows of a results page, not the ones inside channel blocks or shelves. */
+const VIDEO_ROW = 'ytd-item-section-renderer > #contents > ytd-video-renderer';
+
+/** First plain video row's thumbnail on screen, pinned to its video. */
 async function firstThumbnail(page) {
-  const links = page.locator('a[href*="/watch?v="]:has(img), a[href*="/watch?v="]:has(yt-thumbnail-view-model)');
+  const links = page.locator(`${VIDEO_ROW} a#thumbnail[href*="/watch?v="]`);
   await links.first().waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(1500);
   const count = await links.count();
+  let fallback = null;
   for (let i = 0; i < count; i++) {
     const link = links.nth(i);
     const box = await link.boundingBox();
-    if (box && box.width > 150 && box.y >= 0 && box.y + box.height < page.viewportSize().height) return link;
+    if (!box || box.width < 150) continue;
+    const href = await link.getAttribute('href');
+    if (box.y >= 60 && box.y + box.height < page.viewportSize().height) return pinned(page, href, VIDEO_ROW);
+    fallback ??= href;
   }
-  await links.first().scrollIntoViewIfNeeded();
-  return links.first();
+  const link = pinned(page, fallback ?? (await links.first().getAttribute('href')), VIDEO_ROW);
+  await link.scrollIntoViewIfNeeded();
+  return link;
+}
+
+/**
+ * Hovers a thumbnail after centring it, since one left under YouTube's fixed top bar can never be hovered.
+ * YouTube's inline preview player can also stay over the card and fail Playwright's hit test,
+ * though a real pointer there still reaches the card, so the last try skips that test.
+ */
+async function hoverCentred(link, options = {}) {
+  const centre = () => link.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+  await centre();
+  try {
+    await link.hover({ ...options, timeout: 4000 });
+  } catch {
+    await link.page().mouse.move(2, 400);
+    await link.page().waitForTimeout(800);
+    await centre();
+    await link.hover({ ...options, force: true });
+  }
+}
+
+/** Opens a results page with channel cards, shelves and ads hidden. */
+async function openResults(page, url) {
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await declineConsent(page);
+  await hideClutter(page);
 }
 
 /** Accepts nothing: picks the option that declines non-essential cookies if YouTube asks. */
@@ -158,6 +223,9 @@ async function run() {
     const extensionId = new URL(worker.url()).host;
     const panelUrl = `chrome-extension://${extensionId}/panel.html`;
 
+    // Real YouTube results pages can take more than the default 30 seconds to load.
+    context.setDefaultNavigationTimeout(60_000);
+
     // The welcome tab opens by itself on install.
     let welcome = context.pages().find((p) => p.url().startsWith(panelUrl));
     for (let waited = 0; !welcome && waited < 5000; waited += 250) {
@@ -174,8 +242,8 @@ async function run() {
     const toast = page.locator('know-it-root .toast');
     /** Real results pages can still be shifting, leaving the pointer off the card until it moves again. */
     const hoverUntilButton = async (link) => {
-      await link.hover();
-      await button.waitFor({ state: 'visible', timeout: 1500 }).catch(() => link.hover({ position: { x: 20, y: 60 } }));
+      await hoverCentred(link);
+      await button.waitFor({ state: 'visible', timeout: 1500 }).catch(() => hoverCentred(link, { position: { x: 20, y: 60 } }));
       await button.waitFor({ state: 'visible', timeout: 5000 });
     };
     const setStorage = (items) => worker.evaluate((value) => chrome.storage.local.set(value), items);
@@ -236,15 +304,14 @@ async function run() {
 
     console.log('Search results on real YouTube');
     await page.bringToFront();
-    await page.goto('https://www.youtube.com/results?search_query=weekend+investing', { waitUntil: 'domcontentloaded' });
-    await declineConsent(page);
+    await openResults(page, 'https://www.youtube.com/results?search_query=weekend+investing');
     let thumb = await firstThumbnail(page);
     const href = await thumb.getAttribute('href');
     const videoId = new URL(href, 'https://www.youtube.com').searchParams.get('v');
     const startUrl = page.url();
 
     await check('hover shows the button on the thumbnail', async () => {
-      await thumb.hover();
+      await hoverCentred(thumb);
       await button.waitFor({ state: 'visible', timeout: 5000 });
       const buttonBox = await button.boundingBox();
       const thumbBox = await thumb.boundingBox();
@@ -341,7 +408,7 @@ async function run() {
 
     await check('reopening uses the saved answer, with no loading flash', async () => {
       await watchForLoading();
-      await thumb.hover();
+      await hoverCentred(thumb);
       await button.click();
       await popover.getByText('MOCK ANSWER').waitFor({ timeout: 5000 });
       await popover.getByRole('button', { name: 'Ask again' }).waitFor({ timeout: 2000 });
@@ -363,7 +430,7 @@ async function run() {
     console.log('Errors');
     const answerFresh = async () => {
       await popover.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => page.keyboard.press('Escape'));
-      await thumb.hover();
+      await hoverCentred(thumb);
       await button.click();
       await popover.getByRole('button', { name: 'Ask again' }).click();
     };
@@ -411,10 +478,13 @@ async function run() {
       const before = mock.requests.length;
       const { usage } = await getStorage('usage');
       await setStorage({ usage: { day: usage.day, seconds: 8 * 3600 } });
-      await answerFresh();
-      await popover.getByText('free limit of 8 hours').waitFor({ timeout: 5000 });
-      assert(mock.requests.length === before, 'request was sent past the limit');
-      await setStorage({ usage });
+      try {
+        await answerFresh();
+        await popover.getByText('free limit of 8 hours').waitFor({ timeout: 5000 });
+        assert(mock.requests.length === before, 'request was sent past the limit');
+      } finally {
+        await setStorage({ usage });
+      }
     });
     await page.keyboard.press('Escape');
 
@@ -442,14 +512,14 @@ async function run() {
     console.log('Other pages');
     await check('closing while loading still saves the answer', async () => {
       await page.mouse.move(5, 450);
-      const links = page.locator('a[href*="/watch?v="]:has(img), a[href*="/watch?v="]:has(yt-thumbnail-view-model)');
+      const links = page.locator(`${VIDEO_ROW} a#thumbnail[href*="/watch?v="]`);
       let other = null;
       const seen = await links.count();
       for (let i = 0; i < seen; i++) {
-        const candidate = links.nth(i);
-        const candidateId = new URL((await candidate.getAttribute('href')), 'https://www.youtube.com').searchParams.get('v');
+        const candidateHref = await links.nth(i).getAttribute('href');
+        const candidateId = new URL(candidateHref, 'https://www.youtube.com').searchParams.get('v');
         if (candidateId && candidateId !== videoId) {
-          other = candidate;
+          other = pinned(page, candidateHref, VIDEO_ROW);
           break;
         }
       }
@@ -457,12 +527,12 @@ async function run() {
       await other.scrollIntoViewIfNeeded();
       const before = mock.requests.length;
       mock.nextDelayMs = 3000;
-      await other.hover();
+      await hoverCentred(other);
       await button.click();
       await popover.getByText('Watching the video').waitFor({ timeout: 5000 });
       await page.keyboard.press('Escape');
       await page.waitForTimeout(5000);
-      await other.hover();
+      await hoverCentred(other);
       await button.click();
       await popover.getByText('MOCK ANSWER').waitFor({ timeout: 5000 });
       assert(mock.requests.length === before + 1, 'it asked Gemini twice');
@@ -471,7 +541,7 @@ async function run() {
 
     await check('moving away hides the button', async () => {
       await thumb.scrollIntoViewIfNeeded();
-      await thumb.hover();
+      await hoverCentred(thumb);
       await button.waitFor({ state: 'visible', timeout: 5000 });
       await page.mouse.move(2, 2);
       await button.waitFor({ state: 'hidden', timeout: 3000 });
@@ -582,7 +652,7 @@ async function run() {
 
     await check('a real live stream card is refused without asking Gemini', async () => {
       await page.keyboard.press('Escape');
-      await page.goto('https://www.youtube.com/results?search_query=news&sp=EgJAAQ%253D%253D', { waitUntil: 'domcontentloaded' });
+      await openResults(page, 'https://www.youtube.com/results?search_query=news&sp=EgJAAQ%253D%253D');
       const live = await firstThumbnail(page);
       const before = mock.requests.length;
       await hoverUntilButton(live);
@@ -621,8 +691,9 @@ async function run() {
         const box = await link.boundingBox();
         if (!box || box.width < 150 || box.y < 60 || box.y + box.height > page.viewportSize().height) continue;
         if (await link.evaluate((node) => !!node.closest('ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer'))) continue;
-        const id = videoIdOf(await link.getAttribute('href'));
-        if (!found.has(id)) found.set(id, link);
+        const linkHref = await link.getAttribute('href');
+        const id = videoIdOf(linkHref);
+        if (!found.has(id)) found.set(id, pinned(page, linkHref));
       }
       return [...found.values()];
     };
@@ -633,8 +704,8 @@ async function run() {
     await page.keyboard.press('Escape');
     await clearAnswers();
     await setStorage(settingsWith());
-    await page.goto(SHORT_RESULTS, { waitUntil: 'domcontentloaded' });
-    await page.locator(THUMBNAILS).first().waitFor({ timeout: 30_000 });
+    await openResults(page, SHORT_RESULTS);
+    await page.locator(THUMBNAILS).filter({ visible: true }).first().waitFor({ timeout: 30_000 });
     await page.waitForTimeout(2000);
     // Tall ads or shelves can leave fewer than two whole thumbnails on screen, so scroll until there are.
     let cards = await onScreenThumbnails();
@@ -646,7 +717,7 @@ async function run() {
     const [firstCard, secondCard] = cards;
 
     await check('button shows the sparkle icon and "Know it"', async () => {
-      await firstCard.hover();
+      await hoverCentred(firstCard);
       await button.waitFor({ state: 'visible', timeout: 5000 });
       assert(await button.locator('svg.sparkle').isVisible(), 'sparkle is not visible');
       assert((await buttonLabel()) === 'Know it', `label is "${await buttonLabel()}"`);
@@ -658,7 +729,7 @@ async function run() {
       await button.click();
       await popover.getByText('Watching the video').waitFor({ timeout: 5000 });
       await page.keyboard.press('Escape');
-      await secondCard.hover();
+      await hoverCentred(secondCard);
       await marker('loading').first().waitFor({ state: 'visible', timeout: 5000 });
       assert((await buttonLabel()) === 'Know it', `other video's button says "${await buttonLabel()}"`);
 
@@ -672,13 +743,13 @@ async function run() {
     await page.screenshot({ path: join(output, 'loader.png') });
 
     await check('going back shows it is still loading', async () => {
-      await firstCard.hover();
+      await hoverCentred(firstCard);
       await page.waitForTimeout(300);
       assert((await buttonLabel()) === 'Loading…', `button says "${await buttonLabel()}"`);
     });
 
     await check('the loader becomes a ready sparkle, which opens the answer', async () => {
-      await secondCard.hover();
+      await hoverCentred(secondCard);
       await marker('ready').first().waitFor({ state: 'visible', timeout: 15_000 });
       const before = mock.requests.length;
       await page.screenshot({ path: join(output, 'ready-marker.png') });
@@ -686,7 +757,7 @@ async function run() {
       await popover.getByText('MOCK ANSWER').waitFor({ timeout: 3000 });
       assert(mock.requests.length === before, 'opening a ready answer made a request');
       await page.keyboard.press('Escape');
-      await firstCard.hover();
+      await hoverCentred(firstCard);
       await page.waitForTimeout(300);
       assert((await buttonLabel()) === 'See answer', `button says "${await buttonLabel()}"`);
     });
@@ -704,12 +775,12 @@ async function run() {
     await check('reopening while it loads carries on the timer, with no second request', async () => {
       const before = mock.requests.length;
       mock.nextDelayMs = 9000;
-      await cardA.hover();
+      await hoverCentred(cardA);
       await button.click();
       await popover.getByText('Watching the video').waitFor({ timeout: 5000 });
       await page.waitForTimeout(3500);
       await page.keyboard.press('Escape');
-      await cardA.hover();
+      await hoverCentred(cardA);
       await button.click();
       const text = await popover.locator('.loading').textContent({ timeout: 3000 });
       const seconds = Number(text.match(/(\d+)s/)?.[1] ?? 0);
@@ -723,15 +794,15 @@ async function run() {
       const before = mock.requests.length;
       mock.nextDelayMs = 1500;
       mock.nextError = { status: 429, message: 'Quota exceeded', times: 2 };
-      await cardB.hover();
+      await hoverCentred(cardB);
       await button.click();
       await popover.getByText('Watching the video').waitFor({ timeout: 5000 });
       await page.keyboard.press('Escape');
       await page.waitForTimeout(3000);
-      await cardA.hover();
+      await hoverCentred(cardA);
       await marker('failed').first().waitFor({ state: 'visible', timeout: 5000 });
       await page.screenshot({ path: join(output, 'failed-marker.png') });
-      await cardB.hover();
+      await hoverCentred(cardB);
       await button.click();
       await popover.getByText('free-tier limit').waitFor({ timeout: 5000 });
       // Two requests: the model, then its fallback.
@@ -748,7 +819,7 @@ async function run() {
       await clearAnswers();
       mock.nextDelayMs = 4000;
       await cardA.scrollIntoViewIfNeeded();
-      await cardA.hover();
+      await hoverCentred(cardA);
       await button.click();
       await popover.getByText('Watching the video').waitFor({ timeout: 5000 });
       await page.evaluate(() => window.scrollBy(0, 2500));
@@ -764,7 +835,7 @@ async function run() {
       await clearAnswers();
       const from = mock.requests.length;
       await page.goto(SHORT_RESULTS, { waitUntil: 'domcontentloaded' });
-      await page.locator(THUMBNAILS).first().waitFor({ timeout: 30_000 });
+      await page.locator(THUMBNAILS).filter({ visible: true }).first().waitFor({ timeout: 30_000 });
       for (let i = 0; i < 3; i++) {
         await page.waitForTimeout(2500);
         await page.evaluate(() => window.scrollBy(0, 500));
@@ -776,10 +847,8 @@ async function run() {
     // Headless Chrome reports every tab as visible, so these close the tab instead: nobody is there to see the answer.
     const askThenCloseTab = async () => {
       const other = await context.newPage();
-      await other.goto(SHORT_RESULTS, { waitUntil: 'domcontentloaded' });
-      await other.locator(THUMBNAILS).first().waitFor({ timeout: 30_000 });
-      await other.waitForTimeout(1500);
-      const link = other.locator(THUMBNAILS).first();
+      await openResults(other, SHORT_RESULTS);
+      const link = await firstThumbnail(other);
       const id = videoIdOf(await link.getAttribute('href'));
       await clearAnswers();
       mock.nextDelayMs = 3000;
@@ -833,7 +902,7 @@ async function run() {
       await page.locator('ytd-watch-metadata h1').first().waitFor({ timeout: 30_000 });
     };
 
-    await check('the button sits in YouTube’s row of actions, just left of Like', async () => {
+    await check('the button sits in YouTube’s row of actions, just left of Like, or beside the title when the row is full', async () => {
       await watch(shortIds[0]);
       await pageButton.waitFor({ state: 'visible', timeout: 10_000 });
       await page.locator('ytd-watch-metadata #actions button').first().waitFor({ timeout: 10_000 });
@@ -845,10 +914,18 @@ async function run() {
         return { left: r.left, middle: r.top + r.height / 2 };
       });
       const owner = await page.locator('ytd-watch-metadata #owner').first().boundingBox();
+      const title = await page.locator('ytd-watch-metadata #title').first().boundingBox();
       const gap = first.left - (bar.x + bar.width);
-      assert(gap >= 4 && gap <= 20, `gap to the first action is ${gap}px`);
-      assert(Math.abs(bar.y + bar.height / 2 - first.middle) <= 4, `not level with the row: ${JSON.stringify(bar)} vs ${first.middle}`);
-      assert(bar.x >= owner.x + owner.width, 'covers the channel or Subscribe');
+      if (bar.y + bar.height <= first.middle - 8) {
+        // A channel with a Join button or a long name can leave no room in the row; then it goes beside the title.
+        console.log('        no room in the row, so it sits beside the title');
+        assert(Math.abs(bar.x + bar.width - (title.x + title.width)) <= 4, `not at the title's end: ${JSON.stringify(bar)} vs ${JSON.stringify(title)}`);
+        assert(bar.y >= title.y - 4 && bar.y < title.y + title.height, `not level with the title: ${JSON.stringify(bar)} vs ${JSON.stringify(title)}`);
+      } else {
+        assert(gap >= 4 && gap <= 20, `gap to the first action is ${gap}px`);
+        assert(Math.abs(bar.y + bar.height / 2 - first.middle) <= 4, `not level with the row: ${JSON.stringify(bar)} vs ${first.middle}`);
+        assert(bar.x >= owner.x + owner.width, 'covers the channel or Subscribe');
+      }
       await autoSwitch.waitFor({ state: 'visible', timeout: 2000 });
       assert((await autoSwitch.getAttribute('aria-checked')) === 'false', 'auto is on by default');
     });
@@ -926,11 +1003,14 @@ async function run() {
     await check('auto stops at 4 hours of the day', async () => {
       const { usage } = await getStorage('usage');
       await setStorage({ usage: { day: usage.day, seconds: 4 * 3600 } });
-      const from = mock.requests.length;
-      await watch(shortIds[2]);
-      await page.waitForTimeout(8000);
-      assert(mock.requests.length === from, 'asked past the budget');
-      await setStorage({ usage });
+      try {
+        const from = mock.requests.length;
+        await watch(shortIds[2]);
+        await page.waitForTimeout(8000);
+        assert(mock.requests.length === from, 'asked past the budget');
+      } finally {
+        await setStorage({ usage });
+      }
     });
 
     await check('the switch beside the button turns auto off', async () => {
@@ -946,9 +1026,8 @@ async function run() {
 
     await check('auto skips videos over 30 minutes without asking Gemini', async () => {
       await setStorage(settingsWith({ autoAnswer: true }));
-      await page.goto(LONG_RESULTS, { waitUntil: 'domcontentloaded' });
-      await page.locator(THUMBNAILS).first().waitFor({ timeout: 30_000 });
-      const longId = videoIdOf(await page.locator('a[href*="/watch?v="]:has(img), a[href*="/watch?v="]:has(yt-thumbnail-view-model)').first().getAttribute('href'));
+      await openResults(page, LONG_RESULTS);
+      const longId = videoIdOf(await (await firstThumbnail(page)).getAttribute('href'));
       const from = mock.requests.length;
       await watch(longId);
       await page.waitForTimeout(9000);
@@ -1031,7 +1110,7 @@ async function run() {
       await panel.locator('#advanced-toggle').click();
       await panel.locator('#model option[value="gemini-9-flash"]').waitFor({ state: 'attached', timeout: 5000 });
       assert((await panel.locator('#model option[value="gemini-9-flash-image"]').count()) === 0, 'an image model is offered');
-      assert((await panel.locator('#version').textContent()).includes('1.1.0'), 'no version');
+      assert((await panel.locator('#version').textContent()).includes(version), 'no version');
     });
     await panel.screenshot({ path: join(output, 'panel-more.png'), fullPage: true });
     await panel.emulateMedia({ colorScheme: 'dark' });
@@ -1046,7 +1125,7 @@ async function run() {
 
     console.log('Update');
     await check('a newer copy added to an open tab takes over from the old one, as after an update', async () => {
-      await page.goto('https://www.youtube.com/results?search_query=weekend+investing', { waitUntil: 'domcontentloaded' });
+      await openResults(page, 'https://www.youtube.com/results?search_query=weekend+investing');
       await page.locator('know-it-root .topbar-button').waitFor({ state: 'visible', timeout: 15000 });
       // Marks the copy running now, to tell it apart from the one added next.
       await page.evaluate(() => document.querySelector('know-it-root').setAttribute('data-old', ''));
