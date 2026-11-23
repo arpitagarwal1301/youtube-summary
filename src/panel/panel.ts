@@ -41,6 +41,27 @@ function closeEmbedded(): void {
   window.parent.postMessage({ type: 'know-it-close' }, 'https://www.youtube.com');
 }
 
+/** Copies text. In YouTube's drop-down the frame may not be allowed to, so the page copies it instead. */
+async function copyText(text: string): Promise<boolean> {
+  const done = await navigator.clipboard.writeText(text).then(() => true, () => false);
+  if (done || !embedded) return done;
+  return new Promise<boolean>((resolve) => {
+    const id = crypto.randomUUID();
+    const finish = (ok: boolean) => {
+      window.removeEventListener('message', onReply);
+      window.clearTimeout(timer);
+      resolve(ok);
+    };
+    const onReply = (event: MessageEvent) => {
+      const data = event.data as { type?: string; id?: string; ok?: boolean } | null;
+      if (event.origin === 'https://www.youtube.com' && event.source === window.parent && data?.type === 'know-it-copied' && data.id === id) finish(data.ok === true);
+    };
+    const timer = window.setTimeout(() => finish(false), 2000);
+    window.addEventListener('message', onReply);
+    window.parent.postMessage({ type: 'know-it-copy', id, text }, 'https://www.youtube.com');
+  });
+}
+
 const expanded = new Set<string>(location.hash.length > 1 ? [location.hash.slice(1)] : []);
 let config: RemoteConfig;
 
@@ -138,7 +159,7 @@ function answerRow(entry: SavedAnswer): HTMLLIElement {
   const copyLabel = (icon: 'copy' | 'check', text: string) => copy.replaceChildren(createLineIcon(icon), element('span', undefined, text));
   copyLabel('copy', 'Copy');
   copy.addEventListener('click', async () => {
-    const done = await navigator.clipboard.writeText(shareText(video, answer, config.links.share)).then(() => true, () => false);
+    const done = await copyText(shareText(video, answer, config.links.share));
     copyLabel(done ? 'check' : 'copy', done ? 'Copied' : 'Could not copy');
     window.setTimeout(() => copyLabel('copy', 'Copy'), COPIED_FOR_MS);
   });
