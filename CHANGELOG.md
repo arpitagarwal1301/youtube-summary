@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — Copy works in today's answers
+
+Fixed
+
+- **Copy** in today's answers, opened from the button in YouTube's top bar, now copies the answer. Before, it always said "Could not copy".
+
 ## 1.2.0 — The Know It website
 
 Changed
